@@ -178,6 +178,148 @@ def load_config(config_path: Path) -> RadarConfig:
     return RadarConfig(**config_data)
 
 
+def auto_discover_config(
+    excel_path: Path,
+    sheet_name: str = "Radar",
+    title: str = "Technology Radar",
+    subtitle: str = "",
+) -> RadarConfig:
+    """
+    Auto-discover rings and quadrants from Excel file.
+    
+    Reads the Excel file and creates a configuration based on unique values
+    in the ring and quadrant columns. Assigns default colors and ordering.
+    
+    Args:
+        excel_path: Path to Excel file
+        sheet_name: Name of sheet to read
+        title: Radar title
+        subtitle: Radar subtitle
+        
+    Returns:
+        Auto-generated RadarConfig
+        
+    Raises:
+        FileNotFoundError: If Excel file doesn't exist
+        ValueError: If required columns are missing
+    """
+    if not excel_path.exists():
+        raise FileNotFoundError(f"Excel file not found: {excel_path}")
+    
+    # Read Excel file
+    try:
+        df = pd.read_excel(excel_path, sheet_name=sheet_name, engine="openpyxl")
+    except Exception as e:
+        raise ValueError(f"Failed to read Excel file: {e}")
+    
+    # Check required columns
+    if "ring" not in df.columns or "quadrant" not in df.columns:
+        raise ValueError("Excel file must have 'ring' and 'quadrant' columns")
+    
+    # Get unique rings (preserve order of first appearance)
+    unique_rings = []
+    seen_rings = set()
+    for ring in df["ring"].dropna():
+        ring_str = str(ring).strip()
+        ring_slug = slugify(ring_str)
+        if ring_slug not in seen_rings:
+            unique_rings.append(ring_str)
+            seen_rings.add(ring_slug)
+    
+    # Get unique quadrants (preserve order of first appearance)
+    unique_quadrants = []
+    seen_quadrants = set()
+    for quadrant in df["quadrant"].dropna():
+        quad_str = str(quadrant).strip()
+        quad_slug = slugify(quad_str)
+        if quad_slug not in seen_quadrants:
+            unique_quadrants.append(quad_str)
+            seen_quadrants.add(quad_slug)
+    
+    if not unique_rings:
+        raise ValueError("No rings found in Excel file")
+    if not unique_quadrants:
+        raise ValueError("No quadrants found in Excel file")
+    
+    # Default ring colors (cycle through if more rings than colors)
+    default_ring_colors = [
+        "#4CAF50",  # Green
+        "#2196F3",  # Blue
+        "#FFC107",  # Amber
+        "#9E9E9E",  # Grey
+        "#FF5722",  # Deep Orange
+        "#9C27B0",  # Purple
+        "#00BCD4",  # Cyan
+        "#FF9800",  # Orange
+    ]
+    
+    # Create ring configs
+    rings = []
+    for i, ring_name in enumerate(unique_rings):
+        rings.append(RingConfig(
+            id=slugify(ring_name),
+            name=ring_name,
+            order=i,
+            color=default_ring_colors[i % len(default_ring_colors)],
+            description=f"Ring: {ring_name}"
+        ))
+    
+    # Create quadrant configs
+    quadrants = []
+    for quad_name in unique_quadrants:
+        quadrants.append(QuadrantConfig(
+            id=slugify(quad_name),
+            name=quad_name,
+            description=f"Quadrant: {quad_name}"
+        ))
+    
+    # Get unique statuses if status column exists
+    statuses = []
+    if "status" in df.columns:
+        unique_statuses = []
+        seen_statuses = set()
+        for status in df["status"].dropna():
+            status_str = str(status).strip()
+            status_slug = slugify(status_str)
+            if status_slug not in seen_statuses:
+                unique_statuses.append(status_str)
+                seen_statuses.add(status_slug)
+        
+        # Default status colors
+        default_status_colors = {
+            "on-track": "#4CAF50",
+            "at-risk": "#FFC107",
+            "blocked": "#F44336",
+            "new": "#E91E63",
+            "moved-in": "#4CAF50",
+            "moved-out": "#F44336",
+            "unchanged": "#9E9E9E",
+        }
+        
+        for status_name in unique_statuses:
+            status_slug = slugify(status_name)
+            statuses.append(StatusConfig(
+                id=status_slug,
+                name=status_name,
+                color=default_status_colors.get(status_slug, "#9E9E9E"),
+                description=f"Status: {status_name}"
+            ))
+    
+    # Generate subtitle if not provided
+    if not subtitle:
+        subtitle = datetime.now().strftime("Generated %B %Y")
+    
+    return RadarConfig(
+        title=title,
+        subtitle=subtitle,
+        rings=rings,
+        quadrants=quadrants,
+        statuses=statuses,
+        layout=LayoutConfig(),
+        columnMappings=ColumnMappings()
+    )
+
+
 def load_excel(
     excel_path: Path,
     sheet_name: str,

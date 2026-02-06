@@ -17,6 +17,20 @@ Generate interactive Technology/Strategy Radars from Excel files. Perfect for vi
 
 ## Quick Start
 
+### Two Ways to Use
+
+**Option 1: Auto-Discovery (Simplest)**
+Just maintain your Excel file - rings and quadrants are automatically discovered:
+```bash
+excel-radar build --auto-config --input data/radar.xlsx
+```
+
+**Option 2: With Config File (More Control)**
+Use a YAML config file for custom colors, descriptions, and layout:
+```bash
+excel-radar build --config config.yml --input data/radar.xlsx
+```
+
 ### Installation
 
 ```bash
@@ -44,8 +58,11 @@ This creates `data/radar.xlsx` with 20 sample sales/opportunity entries.
 ### Build the Radar
 
 ```bash
-# Build radar from Excel
-excel-radar build --input data/radar.xlsx --out dist
+# Auto-discovery mode (simplest - no config file needed)
+excel-radar build --auto-config --input data/radar.xlsx --out dist
+
+# Or with config file for custom colors/layout
+excel-radar build --config config.yml --input data/radar.xlsx --out dist
 
 # Preview locally
 excel-radar preview --out dist
@@ -59,21 +76,35 @@ Open your browser to `http://localhost:5173` to see the interactive radar!
 
 #### `build` - Generate the radar
 
+**Auto-Discovery Mode (Recommended for Quick Start):**
+```bash
+excel-radar build --auto-config --input data/radar.xlsx --out dist
+```
+
+Automatically discovers rings and quadrants from your Excel file. Just add new rings/quadrants to Excel and they'll appear in the radar!
+
+**With Config File (For Custom Styling):**
 ```bash
 excel-radar build \
-  --input data/radar.xlsx \
-  --sheet Radar \
   --config config.yml \
+  --input data/radar.xlsx \
   --out dist
 ```
 
 **Options:**
 - `--input, -i`: Path to Excel file (default: `data/radar.xlsx`)
 - `--sheet, -s`: Sheet name to read (default: `Radar`)
-- `--config, -c`: Path to config file (default: `config.yml`)
+- `--config, -c`: Path to config file (optional)
+- `--auto-config`: Auto-discover rings/quadrants from Excel (no config needed)
+- `--title`: Radar title (used with --auto-config, default: "Technology Radar")
+- `--subtitle`: Radar subtitle (used with --auto-config)
 - `--out, -o`: Output directory (default: `dist`)
 - `--allow-duplicates`: Allow duplicate entry names (appends suffix)
 - `--embed-json/--no-embed-json`: Embed JSON in HTML for offline use (default: enabled)
+
+**Note:** If neither `--config` nor `--auto-config` is specified, the tool will:
+1. Look for `config.yml` in the current directory
+2. If not found, automatically discover from Excel
 
 #### `validate` - Check Excel file
 
@@ -148,6 +179,24 @@ owner: John Smith
 ```
 
 ## Configuration
+
+### Auto-Discovery vs Config File
+
+**Auto-Discovery Mode** (Recommended for most users):
+- ✅ **Zero configuration** - just edit Excel
+- ✅ **Maximum flexibility** - add/remove rings and quadrants anytime
+- ✅ **No sync issues** - Excel is the single source of truth
+- ✅ **Quick iteration** - change structure without editing YAML
+- ⚠️ Uses default colors (green, blue, amber, grey cycle)
+
+**Config File Mode** (For advanced customization):
+- ✅ **Custom colors** for each ring
+- ✅ **Custom descriptions** for rings, quadrants, statuses
+- ✅ **Layout control** (padding, jitter, dot sizes)
+- ✅ **Column name mapping** (if your Excel uses different column names)
+- ⚠️ Must keep config.yml in sync with Excel
+
+### Config File Format
 
 Edit `config.yml` to customize your radar:
 

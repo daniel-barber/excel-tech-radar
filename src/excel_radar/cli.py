@@ -40,13 +40,26 @@ def build(
         "-s",
         help="Sheet name to read",
     ),
-    config: Path = typer.Option(
-        "config.yml",
+    config: Optional[Path] = typer.Option(
+        None,
         "--config",
         "-c",
-        help="Path to config file",
-        exists=True,
-        dir_okay=False,
+        help="Path to config file (optional if using --auto-config)",
+    ),
+    auto_config: bool = typer.Option(
+        False,
+        "--auto-config",
+        help="Auto-discover rings and quadrants from Excel (no config file needed)",
+    ),
+    title: str = typer.Option(
+        "Technology Radar",
+        "--title",
+        help="Radar title (used with --auto-config)",
+    ),
+    subtitle: str = typer.Option(
+        "",
+        "--subtitle",
+        help="Radar subtitle (used with --auto-config)",
     ),
     out: Path = typer.Option(
         "dist",
@@ -69,13 +82,33 @@ def build(
     Build the radar from Excel file.
     
     Reads Excel → validates → sanitizes → generates radar.json → copies web assets.
+    
+    Use --auto-config to automatically discover rings and quadrants from Excel,
+    or provide --config to use a YAML configuration file.
     """
     try:
         console.print("🔧 Building radar...", style="bold blue")
         
-        # Load config
-        console.print(f"📋 Loading config from {config}")
-        radar_config = load_config(config)
+        # Load or auto-discover config
+        if auto_config:
+            console.print(f"🔍 Auto-discovering config from {input}")
+            from excel_radar.loader import auto_discover_config
+            radar_config = auto_discover_config(input, sheet, title, subtitle)
+            console.print(f"✓ Found {len(radar_config.rings)} rings and {len(radar_config.quadrants)} quadrants", style="green")
+        elif config:
+            console.print(f"📋 Loading config from {config}")
+            radar_config = load_config(config)
+        else:
+            # Try default config.yml, fall back to auto-discovery
+            default_config = Path("config.yml")
+            if default_config.exists():
+                console.print(f"📋 Loading config from {default_config}")
+                radar_config = load_config(default_config)
+            else:
+                console.print(f"🔍 No config file found, auto-discovering from {input}")
+                from excel_radar.loader import auto_discover_config
+                radar_config = auto_discover_config(input, sheet, title, subtitle)
+                console.print(f"✓ Found {len(radar_config.rings)} rings and {len(radar_config.quadrants)} quadrants", style="green")
         
         # Load Excel
         console.print(f"📊 Loading Excel from {input} (sheet: {sheet})")
@@ -120,13 +153,16 @@ def validate(
         "-s",
         help="Sheet name to read",
     ),
-    config: Path = typer.Option(
-        "config.yml",
+    config: Optional[Path] = typer.Option(
+        None,
         "--config",
         "-c",
-        help="Path to config file",
-        exists=True,
-        dir_okay=False,
+        help="Path to config file (optional if using --auto-config)",
+    ),
+    auto_config: bool = typer.Option(
+        False,
+        "--auto-config",
+        help="Auto-discover rings and quadrants from Excel",
     ),
     allow_duplicates: bool = typer.Option(
         False,
@@ -142,9 +178,23 @@ def validate(
     try:
         console.print("🔍 Validating Excel file...", style="bold blue")
         
-        # Load config
-        console.print(f"📋 Loading config from {config}")
-        radar_config = load_config(config)
+        # Load or auto-discover config
+        if auto_config:
+            console.print(f"🔍 Auto-discovering config from {input}")
+            from excel_radar.loader import auto_discover_config
+            radar_config = auto_discover_config(input, sheet)
+        elif config:
+            console.print(f"📋 Loading config from {config}")
+            radar_config = load_config(config)
+        else:
+            default_config = Path("config.yml")
+            if default_config.exists():
+                console.print(f"📋 Loading config from {default_config}")
+                radar_config = load_config(default_config)
+            else:
+                console.print(f"🔍 No config file found, auto-discovering from {input}")
+                from excel_radar.loader import auto_discover_config
+                radar_config = auto_discover_config(input, sheet)
         
         # Display config summary
         table = Table(title="Configuration Summary")
