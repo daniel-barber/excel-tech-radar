@@ -1,0 +1,106 @@
+title: "Sales & Opportunity Strategy Radar"
+subtitle: "Q1 2026"
+
+# Time-based rings (innermost to outermost)
+rings:
+  - id: ready
+    name: "Ready"
+    order: 0
+    color: "#4CAF50"  # Green
+    description: "Immediate/Current opportunities"
+  
+  - id: year1
+    name: "Less Than 1 Year"
+    order: 1
+    color: "#2196F3"  # Blue
+    description: "Short-term opportunities (< 1 year)"
+  
+  - id: year1to3
+    name: "1-3 Years"
+    order: 2
+    color: "#FF9800"  # Orange
+    description: "Medium-term opportunities (1-3 years)"
+  
+  - id: year3plus
+    name: "3+ Years"
+    order: 3
+    color: "#9E9E9E"  # Gray
+    description: "Long-term opportunities (3+ years)"
+
+# Quadrants (customize these for your use case)
+# Examples: Customer segments, Solution types, Business units, Regions
+quadrants:
+  - id: infrastructure
+    name: "Infrastructure"
+    description: "Infrastructure and platform solutions"
+  
+  - id: applications
+    name: "Applications"
+    description: "Application and software solutions"
+  
+  - id: services
+    name: "Services"
+    description: "Professional and managed services"
+  
+  - id: emerging
+    name: "Emerging Tech"
+    description: "Emerging technologies and innovations"
+
+# Status values with colors (customize as needed)
+# These map to the 'status' column in Excel
+statuses:
+  - id: on-track
+    name: "On Track"
+    color: "#4CAF50"  # Green
+    description: "Progressing as planned"
+  
+  - id: at-risk
+    name: "At Risk"
+    color: "#FFC107"  # Yellow
+    description: "Needs attention"
+  
+  - id: blocked
+    name: "Blocked"
+    color: "#F44336"  # Red
+    description: "Critical issues"
+  
+  - id: new
+    name: "New"
+    color: "#E91E63"  # Magenta/Pink
+    description: "Recently added"
+  
+  - id: moved-in
+    name: "Moved In"
+    color: "#4CAF50"  # Green
+    description: "Moved to inner ring"
+  
+  - id: moved-out
+    name: "Moved Out"
+    color: "#FF5722"  # Deep Orange
+    description: "Moved to outer ring"
+
+# Layout configuration
+layout:
+  startAngleDeg: 0        # 0° at right; clockwise
+  padding: 20             # px between rings
+  jitter: 0.85            # 0..1 random jitter factor inside sectors
+  minRadius: 80           # minimum radius for innermost ring
+  maxRadius: 400          # maximum radius for outermost ring
+  dotMinSize: 8           # minimum dot size
+  dotMaxSize: 40          # maximum dot size (based on value/importance)
+
+# Optional: Excel column mappings (if your columns have different names)
+columnMappings:
+  name: "name"
+  ring: "ring"
+  quadrant: "quadrant"
+  isNew: "isNew"
+  status: "status"
+  description: "description"
+  tags: "tags"
+  link: "link"
+  customer: "customer"      # optional
+  value: "value"            # optional (for sizing dots)
+  owner: "owner"            # optional
+
+# Made with Bob

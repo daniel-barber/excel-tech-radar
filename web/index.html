@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales & Opportunity Strategy Radar</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- D3.js from CDN -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <h1 id="radar-title">Sales & Opportunity Strategy Radar</h1>
+            <p id="radar-subtitle">Q1 2026</p>
+        </header>
+
+        <!-- Search and Controls -->
+        <div id="controls">
+            <div id="search-container">
+                <input 
+                    type="text" 
+                    id="search-box" 
+                    placeholder="Search by name or tags..."
+                    aria-label="Search entries"
+                />
+                <button id="clear-search" aria-label="Clear search">✕</button>
+            </div>
+            <div id="filter-controls">
+                <label>
+                    <input type="checkbox" id="filter-new" checked>
+                    Show New
+                </label>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <!-- Radar Visualization -->
+            <div id="radar-container">
+                <svg id="radar-svg" role="img" aria-label="Technology Radar Visualization">
+                    <g id="radar-group"></g>
+                </svg>
+                
+                <!-- Legend -->
+                <div id="legend">
+                    <h3>Legend</h3>
+                    <div id="legend-rings"></div>
+                    <div id="legend-statuses"></div>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <aside id="detail-panel" class="hidden" role="complementary">
+                <button id="close-panel" aria-label="Close detail panel">✕</button>
+                <div id="detail-content">
+                    <h2 id="detail-name"></h2>
+                    <div id="detail-meta">
+                        <span id="detail-ring" class="badge"></span>
+                        <span id="detail-quadrant" class="badge"></span>
+                        <span id="detail-status" class="badge"></span>
+                    </div>
+                    <div id="detail-tags"></div>
+                    <div id="detail-description"></div>
+                    <div id="detail-extra"></div>
+                    <div id="detail-link"></div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Tooltip -->
+        <div id="tooltip" class="hidden" role="tooltip"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Loading radar data...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden">
+            <h2>Error Loading Radar</h2>
+            <p id="error-message"></p>
+        </div>
+    </div>
+
+    <!-- Load the radar app -->
+    <script src="app.js"></script>
+</body>
+</html>
