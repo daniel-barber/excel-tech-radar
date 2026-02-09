@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Tech Radar - Unified Interface</title>
+    <link rel="stylesheet" href="unified.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- AG Grid for Excel editing -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1>📡 Excel Tech Radar</h1>
+                <span id="active-project-name" class="project-name">No project selected</span>
+            </div>
+            <div class="header-right">
+                <button id="view-mode-btn" class="mode-btn active">👁️ View</button>
+                <button id="edit-mode-btn" class="mode-btn">✏️ Edit</button>
+                <button id="save-btn" class="save-btn" style="display:none;">💾 Save</button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Projects</h2>
+                <button id="new-project-btn" class="new-btn">+ New</button>
+            </div>
+            <div id="project-list" class="project-list">
+                <div class="loading">Loading projects...</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Radar View -->
+            <div id="radar-view" class="radar-view">
+                <div class="radar-controls">
+                    <input type="text" id="search" placeholder="🔍 Search entries..." />
+                    <div class="zoom-controls">
+                        <button id="zoom-in" title="Zoom In">+</button>
+                        <button id="zoom-reset" title="Reset Zoom">⊙</button>
+                        <button id="zoom-out" title="Zoom Out">−</button>
+                        <button id="export-png" title="Export as PNG">📷</button>
+                    </div>
+                </div>
+                <svg id="radar"></svg>
+                <div id="tooltip" class="tooltip hidden"></div>
+            </div>
+            
+            <!-- Edit View (shown in edit mode) -->
+            <div id="edit-view-main" class="edit-view-main" style="display:none;">
+                <div class="edit-toolbar">
+                    <h2>📊 Edit Excel Data</h2>
+                    <div class="edit-actions">
+                        <button id="add-row-btn" class="action-btn">➕ Add Row</button>
+                        <button id="delete-row-btn" class="action-btn">🗑️ Delete Row</button>
+                        <button id="refresh-grid-btn" class="action-btn">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div id="grid-container" class="ag-theme-alpine"></div>
+            </div>
+        </main>
+
+        <!-- Right Panel -->
+        <aside class="right-panel">
+            <!-- Detail View -->
+            <div id="detail-view" class="detail-view">
+                <button id="close-detail" class="close-btn">×</button>
+                <h2 id="detail-name"></h2>
+                <div class="detail-meta">
+                    <span id="detail-ring" class="badge"></span>
+                    <span id="detail-quadrant" class="badge"></span>
+                    <span id="detail-status" class="badge"></span>
+                </div>
+                <div id="detail-description" class="detail-description"></div>
+                <a id="detail-link" class="detail-link" target="_blank" rel="noopener noreferrer" style="display:none;"></a>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- New Project Modal -->
+    <div id="new-project-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>Create New Radar</h2>
+            <input type="text" id="new-project-name" placeholder="Project name..." />
+            <div class="modal-actions">
+                <button id="create-project-btn" class="primary-btn">Create</button>
+                <button id="cancel-project-btn" class="secondary-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="unified.js"></script>
+</body>
+</html>

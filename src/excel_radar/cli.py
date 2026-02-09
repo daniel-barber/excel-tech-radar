@@ -371,3 +371,65 @@ if __name__ == "__main__":
     app()
 
 # Made with Bob
+
+
+@app.command()
+def serve(
+    data_dir: Path = typer.Option(
+        "data",
+        "--data",
+        "-d",
+        help="Data directory containing Excel files",
+    ),
+    dist_dir: Path = typer.Option(
+        "dist",
+        "--dist",
+        help="Dist directory for built radars",
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        "-h",
+        help="Host to bind to",
+    ),
+    port: int = typer.Option(
+        5173,
+        "--port",
+        "-p",
+        help="Port to bind to",
+    ),
+    debug: bool = typer.Option(
+        True,
+        "--debug/--no-debug",
+        help="Enable debug mode",
+    ),
+) -> None:
+    """
+    Start the unified interface server with REST API.
+    
+    Provides a web interface for managing multiple radar projects,
+    editing Excel data, and viewing radars interactively.
+    """
+    try:
+        from excel_radar.api import RadarAPI
+        
+        console.print("🚀 Starting unified interface server...", style="bold blue")
+        console.print(f"📁 Data directory: {data_dir.absolute()}")
+        console.print(f"📦 Dist directory: {dist_dir.absolute()}")
+        console.print(f"🌐 Server: http://{host}:{port}")
+        console.print("\n💡 Press Ctrl+C to stop the server\n")
+        
+        api = RadarAPI(data_dir=str(data_dir), dist_dir=str(dist_dir))
+        api.run(host=host, port=port, debug=debug)
+        
+    except ImportError:
+        console.print(
+            "\n❌ Flask not installed. Install with: pip install flask flask-cors",
+            style="bold red"
+        )
+        raise typer.Exit(1)
+    except KeyboardInterrupt:
+        console.print("\n\n👋 Server stopped", style="bold yellow")
+    except Exception as e:
+        console.print(f"\n❌ Server failed: {e}", style="bold red")
+        raise typer.Exit(1)
