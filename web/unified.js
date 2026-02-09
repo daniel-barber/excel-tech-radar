@@ -1370,15 +1370,6 @@ async function exportRadarAsPNG() {
             throw new Error('Radar SVG not found');
         }
         
-        // Helper function to format title: replace underscores with spaces and capitalize words
-        function formatTitle(str) {
-            return str
-                .replace(/_/g, ' ')  // Replace underscores with spaces
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-        }
-        
         // Create a temporary container for export
         const exportContainer = document.createElement('div');
         exportContainer.style.position = 'fixed';
@@ -1395,8 +1386,15 @@ async function exportRadarAsPNG() {
         title.style.textAlign = 'center';
         title.style.marginBottom = '20px';
         
-        const rawProjectName = currentProject ? currentProject.replace('.xlsx', '') : 'Technology Radar';
-        const projectName = formatTitle(rawProjectName);
+        // Use the full title from radarData.meta.title
+        // This comes from the Excel filename (with correct capitalization preserved)
+        let projectName = 'Technology Radar';
+        if (radarData && radarData.meta && radarData.meta.title) {
+            projectName = radarData.meta.title;
+        } else if (currentProject) {
+            // Fallback to filename
+            projectName = currentProject.replace('.xlsx', '');
+        }
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -1443,7 +1441,7 @@ async function exportRadarAsPNG() {
             
             const link = document.createElement('a');
             const timestamp = new Date().toISOString().slice(0, 10);
-            const downloadName = rawProjectName.replace(/_/g, '-');
+            const downloadName = projectName.replace(/_/g, '-');
             link.download = `${downloadName}-${timestamp}.png`;
             link.href = URL.createObjectURL(blob);
             link.click();

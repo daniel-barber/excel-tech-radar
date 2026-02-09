@@ -46,7 +46,7 @@ class RadarAPI:
         config = auto_discover_config(
             excel_path=excel_file,
             sheet_name=sheet_name,
-            title=project_id.replace('_', ' ').title()
+            title=project_id.replace('_', ' ')
         )
         
         # Load and validate entries
@@ -80,12 +80,14 @@ class RadarAPI:
                         if wb.properties and wb.properties.title:
                             display_name = wb.properties.title
                         wb.close()
-                    except:
+                    except Exception as e:
                         pass
                     
                     # Fallback to filename-based name if no stored display name
                     if not display_name:
-                        display_name = excel_file.stem.replace('_', ' ').title()
+                        # Use filename directly, just replace underscores with spaces
+                        # Don't apply .title() as it would change "Stadt-ZH" to "Stadt-Zh"
+                        display_name = excel_file.stem.replace('_', ' ')
                     
                     projects.append({
                         'id': excel_file.stem,
