@@ -10,6 +10,7 @@ let isDirty = false;
 let currentMode = 'view'; // 'view' or 'edit'
 let currentDetailEntry = null;
 let isDetailDirty = false;          // Track unsaved changes in detail edit mode
+let quillEditor = null;             // Quill rich text editor instance
 
 // ===== API Helpers =====
 async function apiCall(endpoint, options = {}) {
@@ -611,8 +612,10 @@ function showDetail(entry) {
     
     // Link
     if (entry.link) {
-        document.getElementById('detail-link').href = entry.link;
-        document.getElementById('detail-link').textContent = entry.link;
+        const linkElement = document.getElementById('detail-link');
+        linkElement.href = entry.link;
+        // Use linkName if available and not empty, otherwise show the URL
+        linkElement.textContent = (entry.linkName && entry.linkName.trim()) ? entry.linkName : entry.link;
         document.getElementById('detail-link-section').style.display = 'block';
     } else {
         document.getElementById('detail-link-section').style.display = 'none';
@@ -646,6 +649,28 @@ function showEditEntryForm() {
     document.getElementById('detail-view-mode').style.display = 'none';
     document.getElementById('detail-edit-mode').style.display = 'block';
     
+    // Initialize Quill editor if not already initialized
+    if (!quillEditor) {
+        quillEditor = new Quill('#edit-description-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['link', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter description (supports rich text and HTML)...'
+        });
+        
+        // Track changes in Quill editor
+        quillEditor.on('text-change', () => {
+            isDetailDirty = true;
+        });
+    }
+    
     // Populate form with current entry data
     document.getElementById('edit-name').value = currentDetailEntry.name;
     document.getElementById('edit-ring').value = currentDetailEntry.ring;
@@ -653,8 +678,12 @@ function showEditEntryForm() {
     document.getElementById('edit-status').value = currentDetailEntry.status || '';
     document.getElementById('edit-isnew').checked = currentDetailEntry.isNew || false;
     document.getElementById('edit-tags').value = currentDetailEntry.tags ? currentDetailEntry.tags.join(', ') : '';
-    document.getElementById('edit-description').value = currentDetailEntry.descriptionHtml || '';
+    document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
+    
+    // Set Quill editor content (HTML)
+    const descriptionHtml = currentDetailEntry.descriptionHtml || '';
+    quillEditor.root.innerHTML = descriptionHtml;
     
     // Populate ring datalist options
     const ringDatalist = document.getElementById('ring-options');
@@ -697,6 +726,9 @@ async function saveEditEntry(event) {
     
     if (!currentDetailEntry || !currentProjectId) return;
     
+    // Get HTML content from Quill editor
+    const descriptionHtml = quillEditor ? quillEditor.root.innerHTML : '';
+    
     // Get form data
     const updatedEntry = {
         name: document.getElementById('edit-name').value,
@@ -705,7 +737,8 @@ async function saveEditEntry(event) {
         status: document.getElementById('edit-status').value || null,
         isNew: document.getElementById('edit-isnew').checked,
         tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
-        description: document.getElementById('edit-description').value,
+        description: descriptionHtml,
+        linkName: document.getElementById('edit-link-name').value || null,
         link: document.getElementById('edit-link').value || null
     };
     
@@ -736,6 +769,10 @@ async function saveEditEntry(event) {
         
         // Find the updated entry in the new radar data
         const updatedRadarEntry = radarData.entries.find(e => e.name === updatedEntry.name);
+        
+        console.log('Updated entry from radar:', updatedRadarEntry);
+        console.log('linkName:', updatedRadarEntry?.linkName);
+        console.log('link:', updatedRadarEntry?.link);
         
         if (updatedRadarEntry) {
             // Update current entry reference

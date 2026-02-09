@@ -88,6 +88,7 @@ class RadarEntry(BaseModel):
     descriptionHtml: str = ""
     tags: List[str] = Field(default_factory=list)
     link: Optional[str] = None
+    linkName: Optional[str] = None
     customer: Optional[str] = None
     value: Optional[float] = None
     owner: Optional[str] = None
@@ -443,6 +444,10 @@ def load_excel(
         if col_map.link in df.columns and not pd.isna(row[col_map.link]):
             link = str(row[col_map.link]).strip()
         
+        linkName = None
+        if 'linkName' in df.columns and not pd.isna(row['linkName']):
+            linkName = str(row['linkName']).strip()
+        
         customer = None
         if col_map.customer in df.columns and not pd.isna(row[col_map.customer]):
             customer = str(row[col_map.customer]).strip()
@@ -469,6 +474,7 @@ def load_excel(
             "descriptionHtml": description,  # Will be sanitized later
             "tags": tags,
             "link": link,
+            "linkName": linkName,
             "customer": customer,
             "value": value,
             "owner": owner,

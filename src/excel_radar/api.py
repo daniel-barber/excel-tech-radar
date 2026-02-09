@@ -314,6 +314,27 @@ class RadarAPI:
                     return jsonify({'error': 'Invalid row index'}), 400
                 
                 # Update the row - handle data type conversions
+                # Add missing columns if they don't exist
+                for key in row_data.keys():
+                    if key not in df.columns:
+                        # Add column with empty string default and explicit string dtype
+                        df[key] = pd.Series([''] * len(df), dtype='object')
+                
+                # First pass: convert column types if needed
+                # Convert any numeric columns that should be strings
+                string_fields = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName', 'customer', 'owner']
+                for key in string_fields:
+                    if key in df.columns and pd.api.types.is_numeric_dtype(df[key]):
+                        df[key] = df[key].astype('object')
+                
+                # Also check incoming data for string values going to numeric columns
+                for key, value in row_data.items():
+                    if key in df.columns:
+                        # If trying to set a string value (including empty string) to a numeric column, convert column to object first
+                        if isinstance(value, str) and pd.api.types.is_numeric_dtype(df[key]):
+                            df[key] = df[key].astype('object')
+                
+                # Second pass: set values
                 for key, value in row_data.items():
                     if key in df.columns:
                         # Convert tags array to comma-separated string
@@ -322,16 +343,21 @@ class RadarAPI:
                         # Convert boolean to proper format
                         elif key == 'isNew' and isinstance(value, bool):
                             value = value
-                        # Handle None/null values based on column dtype
+                        # Handle None/null/empty values based on column dtype
                         elif value is None or value == '':
                             # For numeric columns, use None (becomes NaN in pandas)
                             if pd.api.types.is_numeric_dtype(df[key]):
                                 value = None
                             # For string columns, use empty string
                             else:
-                                value = '' if value == '' else None
+                                value = ''
                         
-                        df.at[row_index, key] = value
+                        try:
+                            df.at[row_index, key] = value
+                        except Exception as e:
+                            # Log the error with details
+                            print(f"Error setting {key}={value} (type: {type(value)}, dtype: {df[key].dtype}): {e}")
+                            raise ValueError(f"Invalid value '{value}' for dtype '{df[key].dtype}'")
                 
                 # Backup original file
                 backup_file = excel_file.with_suffix('.xlsx.bak')

@@ -809,3 +809,25 @@ body {
 }
 
 /* Made with Bob */
+
+/* Quill Editor List Styling */
+.ql-editor ul,
+.ql-editor ol {
+    padding-left: 1.5em;
+}
+
+.ql-editor li {
+    padding-left: 0.5em;
+}
+
+/* Also fix list display in detail view */
+.detail-description ul,
+.detail-description ol {
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+}
+
+.detail-description li {
+    padding-left: 0.5em;
+    margin: 0.25em 0;
+}

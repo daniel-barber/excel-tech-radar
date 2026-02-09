@@ -8,6 +8,9 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!-- html2canvas for PNG export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Quill.js for rich text editing -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <!-- AG Grid for Excel editing -->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
@@ -158,11 +161,17 @@
                         
                         <div class="form-group">
                             <label for="edit-description">Description (HTML allowed)</label>
-                            <textarea id="edit-description" rows="8"></textarea>
+                            <div id="edit-description-editor" style="background: white; min-height: 200px;"></div>
+                            <input type="hidden" id="edit-description" />
                         </div>
                         
                         <div class="form-group">
-                            <label for="edit-link">Link</label>
+                            <label for="edit-link-name">Link Name (optional)</label>
+                            <input type="text" id="edit-link-name" placeholder="e.g., Documentation, GitHub, Website" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-link">Link URL</label>
                             <input type="url" id="edit-link" placeholder="https://..." />
                         </div>
                         
