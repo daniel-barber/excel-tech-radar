@@ -130,7 +130,7 @@ def build(
         copy_web_assets(web_dir, out, embed_json=embed_json)
         
         console.print(f"\n✅ Build complete! Output: {out.absolute()}", style="bold green")
-        console.print(f"\n💡 Run 'excel-radar preview --out {out}' to view locally")
+        console.print(f"\n💡 Run 'excel-radar serve --port 8080' to use the unified interface")
         
     except Exception as e:
         console.print(f"\n❌ Build failed: {e}", style="bold red")
@@ -273,10 +273,25 @@ def preview(
     ),
 ) -> None:
     """
-    Start a local HTTP server to preview the radar.
+    [DEPRECATED] Start a local HTTP server to preview the radar.
     
-    Serves the dist/ directory on localhost.
+    ⚠️  This command is deprecated. Use 'excel-radar serve' instead for the unified interface.
+    
+    The 'preview' command serves the old static radar interface.
+    The 'serve' command provides the new unified interface with project management,
+    live Excel editing, and interactive radar visualization.
     """
+    console.print(
+        "⚠️  WARNING: The 'preview' command is deprecated!\n"
+        "💡 Use 'excel-radar serve --port 8080' instead for the unified interface.\n"
+        "   The unified interface provides:\n"
+        "   • Project management\n"
+        "   • Live Excel editing\n"
+        "   • Interactive radar visualization\n"
+        "   • REST API\n",
+        style="bold yellow"
+    )
+    
     try:
         if not out.exists():
             console.print(
@@ -286,6 +301,7 @@ def preview(
             )
             raise typer.Exit(1)
         
+        console.print(f"\n📦 Serving old static interface from {out} on port {port}...\n", style="dim")
         serve_directory(out, port=port, open_browser=not no_browser)
         
     except KeyboardInterrupt:
@@ -393,7 +409,7 @@ def serve(
         help="Host to bind to",
     ),
     port: int = typer.Option(
-        5173,
+        8080,
         "--port",
         "-p",
         help="Port to bind to",

@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 import pandas as pd
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 from .loader import auto_discover_config, load_excel, validate_entries
 from .builder import build_radar_json
@@ -72,9 +72,24 @@ class RadarAPI:
                         continue
                     
                     stat = excel_file.stat()
+                    
+                    # Try to read display name from Excel properties
+                    display_name = None
+                    try:
+                        wb = load_workbook(excel_file, read_only=True)
+                        if wb.properties and wb.properties.title:
+                            display_name = wb.properties.title
+                        wb.close()
+                    except:
+                        pass
+                    
+                    # Fallback to filename-based name if no stored display name
+                    if not display_name:
+                        display_name = excel_file.stem.replace('_', ' ').title()
+                    
                     projects.append({
                         'id': excel_file.stem,
-                        'name': excel_file.stem.replace('_', ' ').title(),
+                        'name': display_name,
                         'filename': excel_file.name,
                         'size': stat.st_size,
                         'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
@@ -406,9 +421,9 @@ class RadarAPI:
                 project_name = data.get('name', 'New Radar')
                 template = data.get('template', 'default')
                 
-                # Sanitize project name for filename
+                # Sanitize project name for filename (allow alphanumeric, hyphens, and underscores)
                 project_id = project_name.lower().replace(' ', '_')
-                project_id = ''.join(c for c in project_id if c.isalnum() or c == '_')
+                project_id = ''.join(c for c in project_id if c.isalnum() or c in ('_', '-'))
                 
                 excel_file = self.data_dir / f"{project_id}.xlsx"
                 
@@ -420,6 +435,9 @@ class RadarAPI:
                 wb = Workbook()
                 ws = wb.active
                 ws.title = 'Sheet1'
+                
+                # Store the original display name in document properties
+                wb.properties.title = project_name
                 
                 # Add headers based on template
                 if template == 'default':
