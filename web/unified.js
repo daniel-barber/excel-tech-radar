@@ -191,18 +191,24 @@ function updateDatalist(elementId, configItems, entries, fieldName) {
         return;
     }
     
+    // Helper function to normalize values for comparison (lowercase, remove spaces/hyphens/underscores)
+    function normalizeForComparison(str) {
+        return str.toLowerCase().replace(/[\s\-_]+/g, '');
+    }
+    
     // For rings, preserve config order; for others, collect all values
     let orderedValues = [];
     const configValueSet = new Set();
-    const configValueMap = new Map(); // Map lowercase -> original case
+    const configValueMap = new Map(); // Map normalized -> original case
     
     // Add configured items first (from config.yml) - preserve order
     if (configItems && Array.isArray(configItems)) {
         configItems.forEach(item => {
             if (item.name) {
                 orderedValues.push(item.name);
-                configValueSet.add(item.name.toLowerCase());
-                configValueMap.set(item.name.toLowerCase(), item.name);
+                const normalized = normalizeForComparison(item.name);
+                configValueSet.add(normalized);
+                configValueMap.set(normalized, item.name);
             }
         });
     }
@@ -214,9 +220,9 @@ function updateDatalist(elementId, configItems, entries, fieldName) {
             const value = entry[fieldName];
             if (value && typeof value === 'string' && value.trim()) {
                 const trimmedValue = value.trim();
-                const lowerValue = trimmedValue.toLowerCase();
-                // Only add if not in config (case-insensitive check)
-                if (!configValueSet.has(lowerValue)) {
+                const normalized = normalizeForComparison(trimmedValue);
+                // Only add if not in config (normalized comparison)
+                if (!configValueSet.has(normalized)) {
                     additionalValues.add(trimmedValue);
                 }
             }
@@ -285,23 +291,67 @@ function updateStatusDatalist(data) {
         return;
     }
     
-    // Get unique status values from current data
-    const statusSet = new Set();
+    // Helper function to normalize values for comparison (same as updateDatalist)
+    function normalizeForComparison(str) {
+        return str.toLowerCase().replace(/[\s\-_]+/g, '');
+    }
     
-    // Add standard suggestions first
-    statusSet.add('new');
-    statusSet.add('moved in');
-    statusSet.add('moved out');
-    statusSet.add('unchanged');
+    // Collect config statuses (if available) and Excel statuses
+    const configStatusSet = new Set();
+    const configStatusMap = new Map(); // normalized -> original
+    let orderedStatuses = [];
     
-    // Add all unique status values from entries
+    // Add statuses from config (if available in data.statuses)
+    console.log('Status data check:', {
+        hasData: !!data,
+        hasStatuses: !!(data && data.statuses),
+        isArray: !!(data && data.statuses && Array.isArray(data.statuses)),
+        statusCount: data && data.statuses ? data.statuses.length : 0,
+        statuses: data && data.statuses
+    });
+    
+    if (data && data.statuses && Array.isArray(data.statuses) && data.statuses.length > 0) {
+        console.log('Using config statuses:', data.statuses.map(s => s.name));
+        data.statuses.forEach(status => {
+            if (status.name) {
+                orderedStatuses.push(status.name);
+                const normalized = normalizeForComparison(status.name);
+                configStatusSet.add(normalized);
+                configStatusMap.set(normalized, status.name);
+            }
+        });
+    } else {
+        console.log('No config statuses found, using fallback');
+        // Fallback to standard statuses if no config
+        const standardStatuses = ['New', 'Moved In', 'Moved Out', 'Unchanged'];
+        standardStatuses.forEach(status => {
+            orderedStatuses.push(status);
+            const normalized = normalizeForComparison(status);
+            configStatusSet.add(normalized);
+            configStatusMap.set(normalized, status);
+        });
+    }
+    
+    // Add unique status values from entries that aren't in config
+    const additionalStatuses = new Set();
     if (data && data.entries) {
         data.entries.forEach(entry => {
             if (entry.status && entry.status.trim()) {
-                statusSet.add(entry.status.trim());
+                const trimmed = entry.status.trim();
+                const normalized = normalizeForComparison(trimmed);
+                // Only add if not already in config (normalized comparison)
+                if (!configStatusSet.has(normalized)) {
+                    additionalStatuses.add(trimmed);
+                }
             }
         });
     }
+    
+    // Append additional statuses (sorted)
+    const sortedAdditional = Array.from(additionalStatuses).sort();
+    const allStatuses = [...orderedStatuses, ...sortedAdditional];
+    
+    console.log(`Populating edit-status with ${allStatuses.length} values:`, allStatuses);
     
     // Get current value before clearing
     const currentValue = select.value;
@@ -310,16 +360,6 @@ function updateStatusDatalist(data) {
     const firstOption = select.options[0];
     select.innerHTML = '';
     select.appendChild(firstOption);
-    
-    // Convert to array and sort (standard ones first, then alphabetically)
-    const standardStatuses = ['new', 'moved in', 'moved out', 'unchanged'];
-    const customStatuses = Array.from(statusSet)
-            .filter(s => !standardStatuses.includes(s))
-            .sort();
-        
-    const allStatuses = [...standardStatuses, ...customStatuses];
-    
-    console.log(`Populating edit-status with ${allStatuses.length} values:`, allStatuses);
     
     allStatuses.forEach(status => {
         const option = document.createElement('option');
@@ -752,17 +792,44 @@ function showDetail(entry) {
         document.getElementById('detail-status').style.display = 'none';
     }
     
-    // Tags
-    if (entry.tags && entry.tags.length > 0) {
-        const tagsHtml = entry.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+    // Tags - only show if there are actual tags (not empty array or string "[]")
+    let hasTags = false;
+    let tagsArray = [];
+    
+    if (entry.tags) {
+        // Handle case where tags might be a string "[]" or actual array
+        if (typeof entry.tags === 'string') {
+            // If it's a string like "[]" or empty, skip it
+            if (entry.tags.trim() && entry.tags !== '[]') {
+                // Parse comma-separated tags
+                tagsArray = entry.tags.split(',').map(t => t.trim()).filter(t => t);
+                hasTags = tagsArray.length > 0;
+            }
+        } else if (Array.isArray(entry.tags)) {
+            // Filter out empty strings and "[]"
+            tagsArray = entry.tags.filter(tag => tag && tag !== '[]' && tag.trim() !== '');
+            hasTags = tagsArray.length > 0;
+        }
+    }
+    
+    if (hasTags) {
+        const tagsHtml = tagsArray.map(tag => `<span class="tag">${tag}</span>`).join('');
         document.getElementById('detail-tags').innerHTML = tagsHtml;
         document.getElementById('detail-tags-section').style.display = 'block';
     } else {
         document.getElementById('detail-tags-section').style.display = 'none';
     }
     
-    // Description
-    document.getElementById('detail-description').innerHTML = entry.descriptionHtml || '<p>No description</p>';
+    // Description - only show if there's actual content
+    const descriptionHtml = entry.descriptionHtml || '';
+    const descriptionText = descriptionHtml.trim();
+    
+    if (descriptionText && descriptionText !== '<p></p>' && descriptionText !== '<p><br></p>') {
+        document.getElementById('detail-description').innerHTML = descriptionHtml;
+        document.getElementById('detail-description-section').style.display = 'block';
+    } else {
+        document.getElementById('detail-description-section').style.display = 'none';
+    }
     
     // Link
     if (entry.link) {
@@ -825,21 +892,63 @@ function showEditEntryForm() {
         });
     }
     
-    // Populate form with current entry data
+    // Populate all datalists with config + Excel values FIRST
+    updateFormDatalists(radarData);
+    
+    // Helper function to find matching option by normalizing both slug and display name
+    function findMatchingOption(select, targetValue) {
+        if (!targetValue) return '';
+        
+        const normalizedTarget = targetValue.toLowerCase().replace(/[\s\-_]+/g, '');
+        
+        for (let option of select.options) {
+            const normalizedOption = option.value.toLowerCase().replace(/[\s\-_]+/g, '');
+            if (normalizedOption === normalizedTarget) {
+                return option.value;
+            }
+        }
+        return '';
+    }
+    
+    // THEN populate form with current entry data (after dropdowns are ready)
     document.getElementById('edit-name').value = currentDetailEntry.name;
-    document.getElementById('edit-ring').value = currentDetailEntry.ring;
+    
+    // Set ring - find matching display name for the slug
+    const ringSelect = document.getElementById('edit-ring');
+    const matchingRing = findMatchingOption(ringSelect, currentDetailEntry.ring);
+    ringSelect.value = matchingRing;
+    
+    // Set quadrant
     document.getElementById('edit-quadrant').value = currentDetailEntry.quadrant;
-    document.getElementById('edit-status').value = currentDetailEntry.status || '';
-    document.getElementById('edit-tags').value = currentDetailEntry.tags ? currentDetailEntry.tags.join(', ') : '';
+    
+    // Set status - find matching display name for the slug
+    const statusSelect = document.getElementById('edit-status');
+    const matchingStatus = findMatchingOption(statusSelect, currentDetailEntry.status);
+    statusSelect.value = matchingStatus;
+    // Handle tags - filter out empty arrays and string "[]"
+    let tagsValue = '';
+    if (Array.isArray(currentDetailEntry.tags) && currentDetailEntry.tags.length > 0) {
+        // Filter out "[]" and empty strings from array
+        const validTags = currentDetailEntry.tags.filter(tag =>
+            tag && typeof tag === 'string' && tag.trim() !== '' && tag.trim() !== '[]'
+        );
+        if (validTags.length > 0) {
+            tagsValue = validTags.join(', ');
+        }
+    } else if (typeof currentDetailEntry.tags === 'string') {
+        // String value - check if it's "[]" or empty
+        const trimmed = currentDetailEntry.tags.trim();
+        if (trimmed && trimmed !== '[]') {
+            tagsValue = trimmed;
+        }
+    }
+    document.getElementById('edit-tags').value = tagsValue;
     document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
     
     // Set Quill editor content (HTML)
     const descriptionHtml = currentDetailEntry.descriptionHtml || '';
     quillEditor.root.innerHTML = descriptionHtml;
-    
-    // Populate all datalists with config + Excel values
-    updateFormDatalists(radarData);
     
     // Reset dirty flag when entering edit mode
     isDetailDirty = false;

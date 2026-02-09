@@ -212,6 +212,7 @@ def auto_discover_config(
     
     # Try to find config.yml - check provided path, then project root, then Excel directory
     config_rings = []
+    config_statuses = []
     
     if config_path is None:
         # Look for config.yml in project root (2 levels up from data/)
@@ -221,6 +222,7 @@ def auto_discover_config(
         try:
             config = load_config(config_path)
             config_rings = [ring.name for ring in config.rings]
+            config_statuses = [status.name for status in config.statuses]
             # Don't load quadrants from config - keep them flexible and Excel-based
         except Exception:
             pass  # If config loading fails, fall back to auto-discovery
@@ -301,37 +303,46 @@ def auto_discover_config(
             description=f"Quadrant: {quad_name}"
         ))
     
-    # Get unique statuses if status column exists
+    # Get unique statuses - merge config statuses with Excel statuses
     statuses = []
+    unique_statuses = []
+    seen_statuses = set()
+    
+    # First, add all statuses from config.yml (if available)
+    for status_name in config_statuses:
+        status_slug = slugify(status_name)
+        if status_slug not in seen_statuses:
+            unique_statuses.append(status_name)
+            seen_statuses.add(status_slug)
+    
+    # Then add any additional statuses from Excel data
     if "status" in df.columns:
-        unique_statuses = []
-        seen_statuses = set()
         for status in df["status"].dropna():
             status_str = str(status).strip()
             status_slug = slugify(status_str)
             if status_slug not in seen_statuses:
                 unique_statuses.append(status_str)
                 seen_statuses.add(status_slug)
-        
-        # Default status colors - modern refined palette
-        default_status_colors = {
-            "on-track": "#10b981",    # Emerald green
-            "at-risk": "#f59e0b",     # Amber
-            "blocked": "#ef4444",     # Red
-            "new": "#8b5cf6",         # Purple
-            "moved-in": "#10b981",    # Emerald green
-            "moved-out": "#f97316",   # Orange
-            "unchanged": "#6b7280",   # Gray
-        }
-        
-        for status_name in unique_statuses:
-            status_slug = slugify(status_name)
-            statuses.append(StatusConfig(
-                id=status_slug,
-                name=status_name,
-                color=default_status_colors.get(status_slug, "#9E9E9E"),
-                description=f"Status: {status_name}"
-            ))
+    
+    # Default status colors - modern refined palette
+    default_status_colors = {
+        "on-track": "#10b981",    # Emerald green
+        "at-risk": "#f59e0b",     # Amber
+        "blocked": "#ef4444",     # Red
+        "new": "#8b5cf6",         # Purple
+        "moved-in": "#10b981",    # Emerald green
+        "moved-out": "#f97316",   # Orange
+        "unchanged": "#6b7280",   # Gray
+    }
+    
+    for status_name in unique_statuses:
+        status_slug = slugify(status_name)
+        statuses.append(StatusConfig(
+            id=status_slug,
+            name=status_name,
+            color=default_status_colors.get(status_slug, "#9E9E9E"),
+            description=f"Status: {status_name}"
+        ))
     
     # Generate subtitle if not provided
     if not subtitle:

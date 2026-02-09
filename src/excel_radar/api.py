@@ -319,7 +319,19 @@ class RadarAPI:
                 # Write back
                 df.to_excel(excel_file, sheet_name=sheet_name, index=False)
                 
-                return jsonify({'success': True, 'message': 'Row deleted'})
+                # Rebuild radar and return updated data
+                radar_data = self._build_radar_for_project(project_id)
+                
+                # Write radar.json to dist
+                radar_json_file = self.dist_dir / 'radar.json'
+                with open(radar_json_file, 'w') as f:
+                    json.dump(radar_data, f, indent=2)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Row deleted',
+                    'radar': radar_data
+                })
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
