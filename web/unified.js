@@ -506,8 +506,8 @@ function renderRadar(data, searchTerm = '') {
             .attr('cy', y)
             .attr('r', 8)
             .attr('fill', ring.color)
-            .attr('stroke', '#333')
-            .attr('stroke-width', entry.isNew ? 3 : 1.5)
+            .attr('stroke', entry.status === 'new' ? '#ec4899' : '#333')
+            .attr('stroke-width', entry.status === 'new' ? 3 : 1.5)
             .style('cursor', 'pointer')
             .on('click', (event) => {
                 event.stopPropagation();  // Prevent background click
@@ -542,8 +542,8 @@ function showDetail(entry) {
             
             d3.select(this)
                 .style('opacity', isSelected ? 1 : 0.2)
-                .attr('stroke-width', isSelected ? 4 : (entry.isNew ? 3 : 1.5))
-                .attr('stroke', isSelected ? '#3b82f6' : '#333');
+                .attr('stroke-width', isSelected ? 4 : (entry.status === 'new' ? 3 : 1.5))
+                .attr('stroke', isSelected ? '#3b82f6' : (entry.status === 'new' ? '#ec4899' : '#333'));
         });
     
     d3.selectAll('.radar-label')
@@ -585,17 +585,6 @@ function showDetail(entry) {
         document.getElementById('detail-status').style.display = 'inline-block';
     } else {
         document.getElementById('detail-status').style.display = 'none';
-    }
-    
-    // isNew flag - handle boolean, string, or number
-    const isNewValue = entry.isNew === true || entry.isNew === 'true' || entry.isNew === 1 || entry.isNew === '1';
-    if (isNewValue) {
-        document.getElementById('detail-isnew').textContent = 'NEW';
-        document.getElementById('detail-isnew').style.display = 'inline-block';
-        document.getElementById('detail-flags-section').style.display = 'block';
-    } else {
-        document.getElementById('detail-isnew').style.display = 'none';
-        document.getElementById('detail-flags-section').style.display = 'none';
     }
     
     // Tags
@@ -676,7 +665,6 @@ function showEditEntryForm() {
     document.getElementById('edit-ring').value = currentDetailEntry.ring;
     document.getElementById('edit-quadrant').value = currentDetailEntry.quadrant;
     document.getElementById('edit-status').value = currentDetailEntry.status || '';
-    document.getElementById('edit-isnew').checked = currentDetailEntry.isNew || false;
     document.getElementById('edit-tags').value = currentDetailEntry.tags ? currentDetailEntry.tags.join(', ') : '';
     document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
@@ -735,7 +723,6 @@ async function saveEditEntry(event) {
         ring: document.getElementById('edit-ring').value,
         quadrant: document.getElementById('edit-quadrant').value,
         status: document.getElementById('edit-status').value || null,
-        isNew: document.getElementById('edit-isnew').checked,
         tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
         description: descriptionHtml,
         linkName: document.getElementById('edit-link-name').value || null,
