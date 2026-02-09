@@ -3,35 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales & Opportunity Strategy Radar</title>
+    <title>Technology Radar</title>
     <link rel="stylesheet" href="style.css">
-    <!-- D3.js from CDN -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div id="app">
         <!-- Header -->
         <header id="header">
-            <h1 id="radar-title">Sales & Opportunity Strategy Radar</h1>
-            <p id="radar-subtitle">Q1 2026</p>
+            <h1 id="radar-title">Technology Radar</h1>
+            <p id="radar-subtitle">Loading...</p>
         </header>
 
-        <!-- Search and Controls -->
+        <!-- Search -->
         <div id="controls">
             <div id="search-container">
-                <input 
-                    type="text" 
-                    id="search-box" 
-                    placeholder="Search by name or tags..."
+                <input
+                    type="text"
+                    id="search-box"
+                    placeholder="Search entries..."
                     aria-label="Search entries"
                 />
                 <button id="clear-search" aria-label="Clear search">✕</button>
-            </div>
-            <div id="filter-controls">
-                <label>
-                    <input type="checkbox" id="filter-new" checked>
-                    Show New
-                </label>
             </div>
         </div>
 
@@ -42,6 +35,14 @@
                 <svg id="radar-svg" role="img" aria-label="Technology Radar Visualization">
                     <g id="radar-group"></g>
                 </svg>
+                
+                <!-- Zoom Controls -->
+                <div id="zoom-controls">
+                    <button id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button id="zoom-reset" aria-label="Reset zoom" title="Reset zoom (or double-click)">⊙</button>
+                    <button id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+                    <button id="export-png" aria-label="Export to PNG" title="Export radar as PNG image">📷</button>
+                </div>
                 
                 <!-- Legend -->
                 <div id="legend">

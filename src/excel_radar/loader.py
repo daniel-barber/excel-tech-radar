@@ -44,8 +44,8 @@ class LayoutConfig(BaseModel):
     jitter: float = 0.85
     minRadius: int = 80
     maxRadius: int = 400
-    dotMinSize: int = 8
-    dotMaxSize: int = 40
+    dotMinSize: int = 6
+    dotMaxSize: int = 20
 
 
 class ColumnMappings(BaseModel):
@@ -241,13 +241,13 @@ def auto_discover_config(
     if not unique_quadrants:
         raise ValueError("No quadrants found in Excel file")
     
-    # Default ring colors (cycle through if more rings than colors)
+    # Default ring colors - modern refined palette (cycle through if more rings than colors)
     default_ring_colors = [
-        "#4CAF50",  # Green
-        "#2196F3",  # Blue
-        "#FFC107",  # Amber
-        "#9E9E9E",  # Grey
-        "#FF5722",  # Deep Orange
+        "#10b981",  # Emerald green
+        "#3b82f6",  # Blue
+        "#f59e0b",  # Amber
+        "#8b5cf6",  # Purple
+        "#ef4444",  # Red
         "#9C27B0",  # Purple
         "#00BCD4",  # Cyan
         "#FF9800",  # Orange
@@ -285,15 +285,15 @@ def auto_discover_config(
                 unique_statuses.append(status_str)
                 seen_statuses.add(status_slug)
         
-        # Default status colors
+        # Default status colors - modern refined palette
         default_status_colors = {
-            "on-track": "#4CAF50",
-            "at-risk": "#FFC107",
-            "blocked": "#F44336",
-            "new": "#E91E63",
-            "moved-in": "#4CAF50",
-            "moved-out": "#F44336",
-            "unchanged": "#9E9E9E",
+            "on-track": "#10b981",    # Emerald green
+            "at-risk": "#f59e0b",     # Amber
+            "blocked": "#ef4444",     # Red
+            "new": "#8b5cf6",         # Purple
+            "moved-in": "#10b981",    # Emerald green
+            "moved-out": "#f97316",   # Orange
+            "unchanged": "#6b7280",   # Gray
         }
         
         for status_name in unique_statuses:

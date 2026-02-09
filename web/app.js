@@ -40,9 +40,13 @@ async function loadRadarData() {
 
 // ===== Radar Initialization =====
 function initializeRadar() {
-    // Update header
-    document.getElementById('radar-title').textContent = radarData.meta.title;
-    document.getElementById('radar-subtitle').textContent = radarData.meta.subtitle;
+    // Update header with data from radar.json
+    if (radarData.meta.title) {
+        document.getElementById('radar-title').textContent = radarData.meta.title;
+    }
+    if (radarData.meta.subtitle) {
+        document.getElementById('radar-subtitle').textContent = radarData.meta.subtitle;
+    }
     
     // Build legend
     buildLegend();
@@ -52,7 +56,6 @@ function initializeRadar() {
     
     // Setup interactions
     setupSearch();
-    setupFilters();
     setupKeyboardNavigation();
 }
 
@@ -92,8 +95,8 @@ function buildLegend() {
 function renderRadar() {
     const svg = d3.select('#radar-svg');
     const container = document.getElementById('radar-container');
-    const width = Math.min(container.clientWidth - 40, 1000);
-    const height = Math.min(container.clientHeight - 40, 1000);
+    const width = Math.min(container.clientWidth - 40, 1200);
+    const height = Math.min(container.clientHeight - 40, 1200);
     
     svg.attr('width', width).attr('height', height);
     
@@ -102,7 +105,7 @@ function renderRadar() {
     
     const layout = radarData.layout;
     const minRadius = layout.minRadius;
-    const maxRadius = Math.min(width, height) / 2 - 60;
+    const maxRadius = Math.min(width, height) / 2 - 80;
     
     // Calculate ring radii
     const ringCount = radarData.rings.length;
@@ -114,7 +117,47 @@ function renderRadar() {
     const g = svg.select('#radar-group');
     g.selectAll('*').remove();
     
-    // Transform group to center
+    // Add zoom behavior with proper centering
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 4])
+        .on('zoom', (event) => {
+            g.attr('transform', event.transform.toString() + ` translate(${centerX}, ${centerY})`);
+        });
+    
+    svg.call(zoom);
+    
+    // Reset zoom on double-click
+    svg.on('dblclick.zoom', () => {
+        svg.transition()
+            .duration(750)
+            .call(zoom.transform, d3.zoomIdentity);
+    });
+    
+    // Zoom control buttons - zoom to center
+    document.getElementById('zoom-in').onclick = () => {
+        svg.transition()
+            .duration(300)
+            .call(zoom.scaleBy, 1.3);
+    };
+    
+    document.getElementById('zoom-out').onclick = () => {
+        svg.transition()
+            .duration(300)
+            .call(zoom.scaleBy, 0.7);
+    };
+    
+    document.getElementById('zoom-reset').onclick = () => {
+        svg.transition()
+            .duration(750)
+            .call(zoom.transform, d3.zoomIdentity);
+    };
+    
+    // Export to PNG button
+    document.getElementById('export-png').onclick = () => {
+        exportRadarToPNG(svg, radarData.meta.title);
+    };
+    
+    // Initial transform
     g.attr('transform', `translate(${centerX}, ${centerY})`);
     
     // Draw rings
@@ -279,7 +322,7 @@ function applyForceLayout(dots, labels, entries, config) {
     const { ringRadii, angleStep, startAngle, quadrantCount } = config;
     
     const simulation = d3.forceSimulation(entries)
-        .force('collision', d3.forceCollide().radius(d => calculateDotSize(d, radarData.layout) + 2))
+        .force('collision', d3.forceCollide().radius(d => calculateDotSize(d, radarData.layout) + 15))
         .force('constrain', () => {
             entries.forEach(d => {
                 // Constrain to quadrant
@@ -446,24 +489,17 @@ function setupSearch() {
 }
 
 function setupFilters() {
-    const filterNew = document.getElementById('filter-new');
-    
-    filterNew.addEventListener('change', applyFilters);
+    // Filters removed for cleaner UI
 }
 
 function applyFilters() {
-    const filterNew = document.getElementById('filter-new').checked;
-    
     const filterFunc = function(d) {
-        // Search filter
+        // Search filter only
         if (currentFilter) {
             const matchesName = d.name.toLowerCase().includes(currentFilter);
             const matchesTags = d.tags && d.tags.some(tag => tag.toLowerCase().includes(currentFilter));
             if (!matchesName && !matchesTags) return true;
         }
-        
-        // New filter
-        if (!filterNew && d.isNew) return true;
         
         return false;
     };
@@ -482,6 +518,111 @@ function setupKeyboardNavigation() {
     });
     
     document.getElementById('close-panel').addEventListener('click', closeDetailPanel);
+}
+
+// ===== Export to PNG =====
+function exportRadarToPNG(svg, title) {
+    // Get the SVG element and clone it
+    const svgElement = svg.node();
+    
+    // Get the radar group and save its current transform
+    const radarGroup = svgElement.querySelector('#radar-group');
+    const originalTransform = radarGroup.getAttribute('transform');
+    
+    // Temporarily reset transform to capture full radar
+    const svgWidth = svgElement.width.baseVal.value;
+    const svgHeight = svgElement.height.baseVal.value;
+    const svgCenterX = svgWidth / 2;
+    const svgCenterY = svgHeight / 2;
+    radarGroup.setAttribute('transform', `translate(${svgCenterX}, ${svgCenterY})`);
+    
+    // Clone after resetting transform
+    const clone = svgElement.cloneNode(true);
+    
+    // Restore original transform
+    radarGroup.setAttribute('transform', originalTransform);
+    
+    // Get computed styles and apply them inline
+    const allElements = clone.querySelectorAll('*');
+    const originalElements = svgElement.querySelectorAll('*');
+    
+    allElements.forEach((el, i) => {
+        const original = originalElements[i];
+        if (original) {
+            const computedStyle = window.getComputedStyle(original);
+            let styleStr = '';
+            
+            // Copy important style properties
+            const importantProps = [
+                'fill', 'stroke', 'stroke-width', 'font-family', 'font-size',
+                'font-weight', 'text-anchor', 'opacity', 'stroke-dasharray', 'stroke-opacity'
+            ];
+            
+            importantProps.forEach(prop => {
+                const value = computedStyle.getPropertyValue(prop);
+                if (value) {
+                    // Include 'none' for fill property (important for ring circles)
+                    if (prop === 'fill' || value !== 'none' && value !== 'normal') {
+                        styleStr += `${prop}:${value};`;
+                    }
+                }
+            });
+            
+            // Special handling for ring circles - ensure they have no fill
+            if (el.classList && el.classList.contains('ring-circle')) {
+                styleStr += 'fill:none;';
+            }
+            
+            if (styleStr) {
+                el.setAttribute('style', styleStr);
+            }
+        }
+    });
+    
+    // Serialize the styled SVG
+    const svgData = new XMLSerializer().serializeToString(clone);
+    
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const width = svgElement.width.baseVal.value;
+    const height = svgElement.height.baseVal.value;
+    
+    canvas.width = width * 2; // 2x for quality
+    canvas.height = height * 2;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    
+    // White background
+    ctx.fillStyle = '#f8f9fa';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Create image from SVG
+    const img = new Image();
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    img.onload = function() {
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        
+        // Download
+        canvas.toBlob(function(blob) {
+            const link = document.createElement('a');
+            const filename = `${title.replace(/\s+/g, '-').toLowerCase()}-radar.png`;
+            link.download = filename;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+    };
+    
+    img.onerror = function(e) {
+        console.error('Error loading SVG:', e);
+        alert('Export failed. Please try again.');
+    };
+    
+    img.src = url;
 }
 
 // ===== Initialize on Load =====
