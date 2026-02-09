@@ -812,6 +812,111 @@ function showEditEntryForm() {
     });
 }
 
+function showNewEntryForm() {
+    if (!currentProject) {
+        alert('Please select a project first');
+        return;
+    }
+    
+    // Set up for new entry
+    currentDetailEntry = null;
+    
+    // Show detail panel
+    document.getElementById('detail-view').classList.add('active');
+    
+    // Show edit mode, hide view mode
+    document.getElementById('detail-view-mode').style.display = 'none';
+    document.getElementById('detail-edit-mode').style.display = 'block';
+    
+    // Initialize Quill editor if not already done
+    if (!quillEditor) {
+        quillEditor = new Quill('#edit-description-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    ['link'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+        
+        // Track changes in Quill editor
+        quillEditor.on('text-change', () => {
+            isDetailDirty = true;
+        });
+    }
+    
+    // Clear form
+    document.getElementById('edit-name').value = '';
+    document.getElementById('edit-ring').value = '';
+    document.getElementById('edit-quadrant').value = '';
+    document.getElementById('edit-status').value = '';
+    document.getElementById('edit-tags').value = '';
+    document.getElementById('edit-link-name').value = '';
+    document.getElementById('edit-link').value = '';
+    quillEditor.root.innerHTML = '';
+    
+    // Populate dropdowns
+    updateFormDatalists(radarData);
+    
+    // Reset dirty flag
+    isDetailDirty = false;
+}
+
+async function deleteEntry() {
+    if (!currentDetailEntry || !currentProjectId) {
+        alert('No entry selected');
+        return;
+    }
+    
+    const entryName = currentDetailEntry.name;
+    
+    // Confirmation dialog
+    const confirmed = confirm(
+        `⚠️ WARNING: This will permanently delete "${entryName}".\n\n` +
+        `This action cannot be undone. Are you sure?`
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Get all Excel data to find row index
+        const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
+        const allRows = excelResponse.rows || [];
+        
+        // Find the row index
+        const rowIndex = allRows.findIndex(row => row.name === entryName);
+        
+        if (rowIndex === -1) {
+            throw new Error('Entry not found in Excel data');
+        }
+        
+        // Delete row via API
+        const response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
+            method: 'DELETE'
+        });
+        
+        // Update radar data from response
+        if (response.radar) {
+            radarData = response.radar;
+            renderRadar(radarData);
+        }
+        
+        // Close detail panel
+        closeDetail();
+        
+        alert(`Entry "${entryName}" deleted successfully`);
+        
+    } catch (error) {
+        console.error('Failed to delete entry:', error);
+        alert('Failed to delete entry: ' + error.message);
+    }
+}
+
 function cancelEditEntry() {
     // Reset dirty flag
     isDetailDirty = false;
@@ -824,13 +929,13 @@ function cancelEditEntry() {
 async function saveEditEntry(event) {
     event.preventDefault();
     
-    if (!currentDetailEntry || !currentProjectId) return;
+    if (!currentProjectId) return;
     
     // Get HTML content from Quill editor
     const descriptionHtml = quillEditor ? quillEditor.root.innerHTML : '';
     
     // Get form data
-    const updatedEntry = {
+    const entryData = {
         name: document.getElementById('edit-name').value,
         ring: document.getElementById('edit-ring').value,
         quadrant: document.getElementById('edit-quadrant').value,
@@ -841,24 +946,41 @@ async function saveEditEntry(event) {
         link: document.getElementById('edit-link').value || null
     };
     
+    // Validate required fields
+    if (!entryData.name || !entryData.ring || !entryData.quadrant) {
+        alert('Name, Ring, and Quadrant are required fields.');
+        return;
+    }
+    
     try {
-        // Get all Excel data to find row index
-        const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
-        const allRows = excelResponse.rows || [];
+        let response;
         
-        // Find the row index
-        const rowIndex = allRows.findIndex(row => row.name === currentDetailEntry.name);
-        
-        if (rowIndex === -1) {
-            throw new Error('Entry not found in Excel data');
+        if (!currentDetailEntry) {
+            // Creating a new entry - POST to /rows endpoint
+            response = await apiCall(`/projects/${currentProjectId}/rows`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entryData)
+            });
+        } else {
+            // Updating existing entry - find row index and PUT
+            const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
+            const allRows = excelResponse.rows || [];
+            
+            // Find the row index
+            const rowIndex = allRows.findIndex(row => row.name === currentDetailEntry.name);
+            
+            if (rowIndex === -1) {
+                throw new Error('Entry not found in Excel data');
+            }
+            
+            // Update single row via API
+            response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entryData)
+            });
         }
-        
-        // Update single row via API
-        const response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedEntry)
-        });
         
         // Update radar data from response
         if (response.radar) {
@@ -889,8 +1011,9 @@ async function saveEditEntry(event) {
         }
         
         // Show success message (after mode switch to avoid UI glitch)
+        const successMessage = currentDetailEntry ? 'Entry updated successfully!' : 'Entry created successfully!';
         setTimeout(() => {
-            alert('Entry updated successfully!');
+            alert(successMessage);
         }, 100);
         
     } catch (error) {
@@ -924,8 +1047,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Close detail
     document.getElementById('close-detail').addEventListener('click', closeDetail);
     
+    // New entry button
+    document.getElementById('new-entry-btn').addEventListener('click', showNewEntryForm);
+    
     // Edit entry button
     document.getElementById('edit-entry-btn').addEventListener('click', showEditEntryForm);
+    
+    // Delete entry button
+    document.getElementById('delete-entry-btn').addEventListener('click', deleteEntry);
     
     // Cancel edit entry
     document.getElementById('cancel-edit-btn').addEventListener('click', cancelEditEntry);
@@ -946,6 +1075,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Rename project functionality
     document.getElementById('rename-project-btn')?.addEventListener('click', renameProject);
+    
+    // Delete project functionality
+    document.getElementById('delete-project-btn')?.addEventListener('click', deleteProject);
 });
 
 // ===== Rename Project Function =====
@@ -992,6 +1124,67 @@ async function renameProject() {
     } catch (error) {
         console.error('Failed to rename project:', error);
         alert('Failed to rename project: ' + error.message);
+    }
+}
+
+// ===== Delete Project Function =====
+async function deleteProject() {
+    if (!currentProject) {
+        alert('No project selected');
+        return;
+    }
+    
+    const projectName = currentProject.replace('.xlsx', '');
+    
+    // First confirmation
+    const firstConfirm = confirm(
+        `⚠️ WARNING: You are about to delete the project "${projectName}".\n\n` +
+        `This action CANNOT be undone!\n\n` +
+        `Click OK to continue, or Cancel to abort.`
+    );
+    
+    if (!firstConfirm) {
+        return;
+    }
+    
+    // Second confirmation - require typing project name
+    const typedName = prompt(
+        `To confirm deletion, please type the project name exactly:\n\n"${projectName}"\n\n` +
+        `Type the name and click OK to permanently delete this project:`
+    );
+    
+    if (typedName !== projectName) {
+        if (typedName !== null) {  // User didn't cancel
+            alert('Project name did not match. Deletion cancelled.');
+        }
+        return;
+    }
+    
+    try {
+        await apiCall(`/projects/${currentProject}`, {
+            method: 'DELETE'
+        });
+        
+        // Clear current project
+        currentProject = null;
+        currentProjectId = null;
+        radarData = null;
+        
+        // Clear UI
+        document.getElementById('active-project-name').textContent = 'No project selected';
+        document.getElementById('radar').innerHTML = '';
+        
+        // Switch to view mode
+        switchToViewMode();
+        
+        // Reload project list
+        await loadProjects();
+        
+        alert('Project deleted successfully!');
+        
+    } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project: ' + error.message);
     }
 }
 

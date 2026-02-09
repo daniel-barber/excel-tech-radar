@@ -49,6 +49,7 @@
             <div id="radar-view" class="radar-view">
                 <div class="radar-controls">
                     <input type="text" id="search" placeholder="🔍 Search entries..." />
+                    <button id="new-entry-btn" class="new-entry-btn" title="Add New Entry">➕ New Entry</button>
                     <button id="export-png" class="export-btn" title="Export as PNG">📷 Export PNG</button>
                 </div>
                 <svg id="radar"></svg>
@@ -63,6 +64,7 @@
                         <button id="rename-project-btn" class="action-btn">✏️ Rename Project</button>
                         <button id="add-row-btn" class="action-btn">➕ Add Row</button>
                         <button id="delete-row-btn" class="action-btn">🗑️ Delete Row</button>
+                        <button id="delete-project-btn" class="action-btn danger-btn">🗑️ Delete Project</button>
                         <button id="refresh-grid-btn" class="action-btn">🔄 Refresh</button>
                     </div>
                 </div>
@@ -161,6 +163,7 @@
                         
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">💾 Save</button>
+                            <button type="button" id="delete-entry-btn" class="danger-btn">🗑️ Delete</button>
                             <button type="button" id="cancel-edit-btn" class="secondary-btn">Cancel</button>
                         </div>
                     </form>

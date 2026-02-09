@@ -1,4 +1,39 @@
 /* Unified Interface Styles */
+
+/* New Entry Button */
+.new-entry-btn {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.new-entry-btn:hover {
+    background: #059669;
+}
+
+/* Danger Button */
+.danger-btn {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.danger-btn:hover {
+    background: #b91c1c;
+}
+
 :root {
     --color-primary: #3b82f6;
     --color-success: #10b981;
@@ -289,6 +324,18 @@ body {
     background: var(--color-primary);
     color: white;
     border-color: var(--color-primary);
+}
+
+/* Override for danger button */
+.action-btn.danger-btn {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+.action-btn.danger-btn:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
 }
 
 #grid-container {

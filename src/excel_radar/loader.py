@@ -237,10 +237,11 @@ def auto_discover_config(
             unique_quadrants.append(quad_str)
             seen_quadrants.add(quad_slug)
     
+    # If Excel is empty, use default rings (no quadrants by default)
     if not unique_rings:
-        raise ValueError("No rings found in Excel file")
+        unique_rings = ["Ready", "<1 Year", "1-3 Years", "3+ Years"]
     if not unique_quadrants:
-        raise ValueError("No quadrants found in Excel file")
+        unique_quadrants = []  # No quadrants by default - simple circular radar
     
     # Default ring colors - modern refined palette (cycle through if more rings than colors)
     default_ring_colors = [
@@ -414,13 +415,8 @@ def load_excel(
             )
         quadrant_id = quadrant_ids[quad_slug]
         
-        # Parse isNew
-        is_new = False
-        if col_map.isNew in df.columns and not pd.isna(row[col_map.isNew]):
-            try:
-                is_new = parse_boolean(row[col_map.isNew])
-            except ValueError as e:
-                raise ValueError(f"Row {idx + 2}: Invalid isNew value: {e}")
+        # Note: isNew column is deprecated and ignored for backward compatibility
+        # Old Excel files may still have this column, but we now use status field instead
         
         # Map status (optional)
         status_id = None
@@ -469,7 +465,6 @@ def load_excel(
             "name": name,
             "ring": ring_id,
             "quadrant": quadrant_id,
-            "isNew": is_new,
             "status": status_id,
             "descriptionHtml": description,  # Will be sanitized later
             "tags": tags,
@@ -482,9 +477,7 @@ def load_excel(
         
         entries.append(entry)
     
-    if not entries:
-        raise ValueError("No valid entries found in Excel file")
-    
+    # Allow empty entries list for new/empty projects
     return entries
 
 

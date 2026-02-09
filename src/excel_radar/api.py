@@ -248,6 +248,12 @@ class RadarAPI:
                 # Read existing data
                 df = pd.read_excel(excel_file, sheet_name=sheet_name)
                 
+                # Ensure all required columns exist
+                required_cols = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName']
+                for col in required_cols:
+                    if col not in df.columns:
+                        df[col] = pd.Series(dtype='object')
+                
                 # Append new row
                 new_row = pd.DataFrame([row_data])
                 df = pd.concat([df, new_row], ignore_index=True)
@@ -255,7 +261,19 @@ class RadarAPI:
                 # Write back
                 df.to_excel(excel_file, sheet_name=sheet_name, index=False)
                 
-                return jsonify({'success': True, 'message': 'Row added'})
+                # Rebuild radar
+                radar_data = self._build_radar_for_project(project_id)
+                
+                # Write radar.json to dist
+                radar_json_file = self.dist_dir / 'radar.json'
+                with open(radar_json_file, 'w') as f:
+                    json.dump(radar_data, f, indent=2)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Row added',
+                    'radar': radar_data
+                })
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
@@ -405,18 +423,9 @@ class RadarAPI:
                 
                 # Add headers based on template
                 if template == 'default':
-                    headers = ['name', 'ring', 'quadrant', 'isNew', 'status', 'description']
+                    headers = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName']
                     ws.append(headers)
-                    
-                    # Add sample row
-                    ws.append([
-                        'Sample Entry',
-                        'Adopt',
-                        'Techniques',
-                        'TRUE',
-                        'new',
-                        '<p>This is a sample entry. Edit or delete it.</p>'
-                    ])
+                    # No sample rows - start with empty project
                 
                 wb.save(excel_file)
                 
