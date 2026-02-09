@@ -402,8 +402,29 @@ function renderRadar(data, searchTerm = '') {
     const centerX = width / 2;
     const centerY = height / 2;
     
+    // Add background rectangle for click detection
+    svg.append('rect')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('fill', 'transparent')
+        .style('cursor', 'default')
+        .on('click', () => {
+            // Close detail panel when clicking background
+            if (document.getElementById('detail-view').classList.contains('active')) {
+                closeDetail();
+            }
+        });
+    
     const g = svg.append('g')
         .attr('transform', `translate(${centerX},${centerY})`);
+    
+    // Helper function to capitalize text
+    function capitalize(str) {
+        return str
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
     
     // Draw rings
     const maxRadius = Math.min(width, height) / 2 - 100;
@@ -419,11 +440,26 @@ function renderRadar(data, searchTerm = '') {
         g.append('text')
             .attr('class', 'ring-label')
             .attr('y', -radius + 20)
-            .text(ring.name);
+            .text(capitalize(ring.name));
     });
     
-    // Draw quadrants
+    // Draw quadrant divider lines
     const angleStep = (2 * Math.PI) / data.quadrants.length;
+    data.quadrants.forEach((quadrant, i) => {
+        const angle = i * angleStep;
+        
+        // Draw divider line from center to outer edge
+        g.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', Math.cos(angle) * maxRadius)
+            .attr('y2', Math.sin(angle) * maxRadius)
+            .attr('stroke', '#cbd5e1')
+            .attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '5,5');
+    });
+    
+    // Draw quadrant labels
     data.quadrants.forEach((quadrant, i) => {
         const angle = i * angleStep;
         const labelRadius = maxRadius + 40;
@@ -435,7 +471,7 @@ function renderRadar(data, searchTerm = '') {
             .attr('x', x)
             .attr('y', y)
             .attr('text-anchor', 'middle')
-            .text(quadrant.name);
+            .text(capitalize(quadrant.name));
     });
     
     // Filter entries based on search term
@@ -472,7 +508,10 @@ function renderRadar(data, searchTerm = '') {
             .attr('stroke', '#333')
             .attr('stroke-width', entry.isNew ? 3 : 1.5)
             .style('cursor', 'pointer')
-            .on('click', () => showDetail(entry));
+            .on('click', (event) => {
+                event.stopPropagation();  // Prevent background click
+                showDetail(entry);
+            });
         
         g.append('text')
             .attr('class', 'radar-label')
@@ -768,7 +807,57 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Export PNG functionality
     document.getElementById('export-png').addEventListener('click', exportRadarAsPNG);
+    
+    // Rename project functionality
+    document.getElementById('rename-project-btn')?.addEventListener('click', renameProject);
 });
+
+// ===== Rename Project Function =====
+async function renameProject() {
+    if (!currentProject) {
+        alert('No project selected');
+        return;
+    }
+    
+    const currentName = currentProject.replace('.xlsx', '');
+    const newName = prompt('Enter new project name:', currentName);
+    
+    if (!newName || newName.trim() === '') {
+        return;  // User cancelled or entered empty name
+    }
+    
+    if (newName === currentName) {
+        return;  // No change
+    }
+    
+    // Validate filename (no special characters except underscore, hyphen, and space)
+    if (!/^[a-zA-Z0-9_\- ]+$/.test(newName)) {
+        alert('Project name can only contain letters, numbers, spaces, underscores, and hyphens');
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/projects/${currentProject}/rename`, {
+            method: 'POST',
+            body: JSON.stringify({ new_name: newName + '.xlsx' })
+        });
+        
+        // Update current project reference
+        currentProject = response.new_name;
+        
+        // Update UI
+        document.getElementById('active-project-name').textContent = newName;
+        
+        // Reload project list to show new name
+        await loadProjects();
+        
+        alert('Project renamed successfully!');
+        
+    } catch (error) {
+        console.error('Failed to rename project:', error);
+        alert('Failed to rename project: ' + error.message);
+    }
+}
 
 // ===== PNG Export Function using html2canvas =====
 async function exportRadarAsPNG() {

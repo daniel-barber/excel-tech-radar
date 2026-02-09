@@ -3,6 +3,7 @@ Flask API server for Excel Tech Radar management.
 Provides REST endpoints for managing radar projects and entries.
 """
 import json
+import re
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -96,6 +97,47 @@ class RadarAPI:
                 
                 radar_data = self._build_radar_for_project(project_id)
                 return jsonify(radar_data)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/rename', methods=['POST'])
+        def rename_project(project_id: str):
+            """Rename a project (rename the Excel file)."""
+            try:
+                old_file = self.data_dir / f"{project_id}.xlsx"
+                if not old_file.exists():
+                    return jsonify({'error': 'Project not found'}), 404
+                
+                data = request.json
+                new_name = data.get('new_name')
+                
+                if not new_name:
+                    return jsonify({'error': 'new_name is required'}), 400
+                
+                # Validate filename (no special characters except underscore, hyphen, and space)
+                # Remove .xlsx extension for validation if present
+                name_to_validate = new_name.replace('.xlsx', '')
+                if not re.match(r'^[a-zA-Z0-9_\- ]+$', name_to_validate):
+                    return jsonify({'error': 'Project name can only contain letters, numbers, spaces, underscores, and hyphens'}), 400
+                
+                # Ensure .xlsx extension
+                if not new_name.endswith('.xlsx'):
+                    new_name += '.xlsx'
+                
+                new_file = self.data_dir / new_name
+                
+                # Check if target already exists
+                if new_file.exists():
+                    return jsonify({'error': 'A project with that name already exists'}), 400
+                
+                # Rename the file
+                old_file.rename(new_file)
+                
+                return jsonify({
+                    'success': True,
+                    'old_name': f"{project_id}.xlsx",
+                    'new_name': new_name
+                })
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
