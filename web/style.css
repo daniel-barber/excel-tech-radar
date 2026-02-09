@@ -188,6 +188,20 @@ body {
     filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
 }
 
+.radar-label {
+    cursor: pointer;
+    user-select: none;
+    pointer-events: none;
+    font-size: 10px;
+    font-weight: 500;
+    fill: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.radar-label.filtered {
+    opacity: 0.2;
+}
+
 /* Status-specific styling */
 .radar-dot.status-new {
     stroke: var(--color-new);

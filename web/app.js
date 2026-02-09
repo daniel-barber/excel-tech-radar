@@ -181,7 +181,7 @@ function renderRadar() {
         minRadius,
     });
     
-    // Draw entries
+    // Draw entries (dots)
     const dots = g.selectAll('.radar-dot')
         .data(positionedEntries)
         .enter()
@@ -212,8 +212,25 @@ function renderRadar() {
         .on('mouseleave', handleDotLeave)
         .on('click', handleDotClick);
     
+    // Draw labels below dots
+    const labels = g.selectAll('.radar-label')
+        .data(positionedEntries)
+        .enter()
+        .append('text')
+        .attr('class', 'radar-label')
+        .attr('x', d => d.x)
+        .attr('y', d => d.y + calculateDotSize(d, layout) + 12)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .attr('font-weight', '500')
+        .attr('fill', '#333')
+        .attr('pointer-events', 'none')
+        .text(d => d.name)
+        .on('mouseenter', handleDotHover)
+        .on('click', handleDotClick);
+    
     // Apply force simulation for collision avoidance
-    applyForceLayout(dots, positionedEntries, {
+    applyForceLayout(dots, labels, positionedEntries, {
         ringRadii,
         angleStep,
         startAngle,
@@ -258,7 +275,7 @@ function positionEntries(entries, config) {
 }
 
 // ===== Force Layout =====
-function applyForceLayout(dots, entries, config) {
+function applyForceLayout(dots, labels, entries, config) {
     const { ringRadii, angleStep, startAngle, quadrantCount } = config;
     
     const simulation = d3.forceSimulation(entries)
@@ -291,6 +308,8 @@ function applyForceLayout(dots, entries, config) {
         .alphaDecay(0.05)
         .on('tick', () => {
             dots.attr('cx', d => d.x).attr('cy', d => d.y);
+            labels.attr('x', d => d.x)
+                  .attr('y', d => d.y + calculateDotSize(d, radarData.layout) + 12);
         });
 }
 
@@ -435,7 +454,7 @@ function setupFilters() {
 function applyFilters() {
     const filterNew = document.getElementById('filter-new').checked;
     
-    d3.selectAll('.radar-dot').classed('filtered', function(d) {
+    const filterFunc = function(d) {
         // Search filter
         if (currentFilter) {
             const matchesName = d.name.toLowerCase().includes(currentFilter);
@@ -447,7 +466,11 @@ function applyFilters() {
         if (!filterNew && d.isNew) return true;
         
         return false;
-    });
+    };
+    
+    // Apply filter to both dots and labels
+    d3.selectAll('.radar-dot').classed('filtered', filterFunc);
+    d3.selectAll('.radar-label').classed('filtered', filterFunc);
 }
 
 // ===== Keyboard Navigation =====
