@@ -91,7 +91,7 @@
                         </div>
                     </div>
                     
-                    <div class="detail-section">
+                    <div class="detail-section" id="detail-flags-section">
                         <h3>Flags</h3>
                         <div class="detail-flags">
                             <span id="detail-isnew" class="flag-badge"></span>
@@ -124,20 +124,26 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="edit-ring">Ring *</label>
-                            <select id="edit-ring" required></select>
+                            <label for="edit-ring">Ring * <small>(select or type new)</small></label>
+                            <input type="text" id="edit-ring" list="ring-options" required />
+                            <datalist id="ring-options"></datalist>
                         </div>
                         
                         <div class="form-group">
-                            <label for="edit-quadrant">Quadrant *</label>
-                            <select id="edit-quadrant" required></select>
+                            <label for="edit-quadrant">Quadrant * <small>(select or type new)</small></label>
+                            <input type="text" id="edit-quadrant" list="quadrant-options" required />
+                            <datalist id="quadrant-options"></datalist>
                         </div>
                         
                         <div class="form-group">
-                            <label for="edit-status">Status</label>
-                            <select id="edit-status">
-                                <option value="">None</option>
-                            </select>
+                            <label for="edit-status">Status <small>(select or type new)</small></label>
+                            <input type="text" id="edit-status" list="status-options" />
+                            <datalist id="status-options">
+                                <option value="new">
+                                <option value="moved in">
+                                <option value="moved out">
+                                <option value="unchanged">
+                            </datalist>
                         </div>
                         
                         <div class="form-group">

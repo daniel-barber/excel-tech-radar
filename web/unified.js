@@ -9,6 +9,7 @@ let gridApi = null;
 let isDirty = false;
 let currentMode = 'view'; // 'view' or 'edit'
 let currentDetailEntry = null;
+let isDetailDirty = false;          // Track unsaved changes in detail edit mode
 
 // ===== API Helpers =====
 async function apiCall(endpoint, options = {}) {
@@ -94,7 +95,7 @@ async function selectProject(projectId) {
         return;
     }
     
-    // Check for unsaved changes in edit mode
+    // Check for unsaved changes in edit mode (table editing)
     if (currentMode === 'edit' && isDirty) {
         const save = confirm('You have unsaved changes. Do you want to save before switching projects?');
         if (save) {
@@ -109,6 +110,25 @@ async function selectProject(projectId) {
             const proceed = confirm('Discard unsaved changes and switch projects?');
             if (!proceed) return;
         }
+    }
+    
+    // Check for unsaved changes in detail panel edit mode
+    if (isDetailDirty) {
+        const save = confirm('You have unsaved changes in the detail panel. Save before switching?');
+        if (save) {
+            // Try to save the detail panel changes
+            try {
+                await saveEditEntry(new Event('submit'));
+            } catch (error) {
+                console.error('Failed to save detail changes:', error);
+                const proceed = confirm('Failed to save. Switch anyway?');
+                if (!proceed) return;
+            }
+        } else {
+            const proceed = confirm('Discard unsaved detail changes and switch projects?');
+            if (!proceed) return;
+        }
+        isDetailDirty = false;
     }
     
     // Switch to view mode when changing projects
@@ -132,6 +152,9 @@ async function selectProject(projectId) {
     if (saveBtn) {
         saveBtn.style.display = 'none';
     }
+    
+    // Close detail panel when switching projects
+    closeDetail();
     
     // Load radar data
     await loadRadar(projectId);
@@ -463,27 +486,37 @@ function showDetail(entry) {
     const ring = radarData.rings.find(r => r.id === entry.ring);
     const quadrant = radarData.quadrants.find(q => q.id === entry.quadrant);
     
-    document.getElementById('detail-ring').textContent = ring.name;
-    document.getElementById('detail-ring').style.background = ring.color;
+    document.getElementById('detail-ring').textContent = ring ? ring.name : entry.ring;
+    document.getElementById('detail-ring').style.background = ring ? ring.color : '#94a3b8';
     
-    document.getElementById('detail-quadrant').textContent = quadrant.name;
+    document.getElementById('detail-quadrant').textContent = quadrant ? quadrant.name : entry.quadrant;
+    document.getElementById('detail-quadrant').style.background = '#64748b';
+    document.getElementById('detail-quadrant').style.color = '#ffffff';
     
     // Status
     if (entry.status) {
         const status = radarData.statuses.find(s => s.id === entry.status);
-        document.getElementById('detail-status').textContent = status.name;
-        document.getElementById('detail-status').style.background = status.color;
+        if (status) {
+            document.getElementById('detail-status').textContent = status.name;
+            document.getElementById('detail-status').style.background = status.color;
+        } else {
+            document.getElementById('detail-status').textContent = entry.status;
+            document.getElementById('detail-status').style.background = '#94a3b8';
+        }
         document.getElementById('detail-status').style.display = 'inline-block';
     } else {
         document.getElementById('detail-status').style.display = 'none';
     }
     
-    // isNew flag
-    if (entry.isNew) {
+    // isNew flag - handle boolean, string, or number
+    const isNewValue = entry.isNew === true || entry.isNew === 'true' || entry.isNew === 1 || entry.isNew === '1';
+    if (isNewValue) {
         document.getElementById('detail-isnew').textContent = 'NEW';
         document.getElementById('detail-isnew').style.display = 'inline-block';
+        document.getElementById('detail-flags-section').style.display = 'block';
     } else {
         document.getElementById('detail-isnew').style.display = 'none';
+        document.getElementById('detail-flags-section').style.display = 'none';
     }
     
     // Tags
@@ -532,30 +565,37 @@ function showEditEntryForm() {
     document.getElementById('edit-description').value = currentDetailEntry.descriptionHtml || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
     
-    // Populate ring options
-    const ringSelect = document.getElementById('edit-ring');
-    ringSelect.innerHTML = radarData.rings.map(r =>
+    // Populate ring datalist options
+    const ringDatalist = document.getElementById('ring-options');
+    ringDatalist.innerHTML = radarData.rings.map(r =>
         `<option value="${r.id}">${r.name}</option>`
     ).join('');
-    ringSelect.value = currentDetailEntry.ring;
     
-    // Populate quadrant options
-    const quadrantSelect = document.getElementById('edit-quadrant');
-    quadrantSelect.innerHTML = radarData.quadrants.map(q =>
+    // Populate quadrant datalist options
+    const quadrantDatalist = document.getElementById('quadrant-options');
+    quadrantDatalist.innerHTML = radarData.quadrants.map(q =>
         `<option value="${q.id}">${q.name}</option>`
     ).join('');
-    quadrantSelect.value = currentDetailEntry.quadrant;
     
-    // Populate status options
-    const statusSelect = document.getElementById('edit-status');
-    statusSelect.innerHTML = '<option value="">None</option>' +
-        radarData.statuses.map(s =>
-            `<option value="${s.id}">${s.name}</option>`
-        ).join('');
-    statusSelect.value = currentDetailEntry.status || '';
+    // Status datalist is already populated in HTML with common values
+    // Users can type custom status values
+    
+    // Reset dirty flag when entering edit mode
+    isDetailDirty = false;
+    
+    // Add change listeners to track edits
+    const formInputs = document.querySelectorAll('#edit-entry-form input, #edit-entry-form textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            isDetailDirty = true;
+        });
+    });
 }
 
 function cancelEditEntry() {
+    // Reset dirty flag
+    isDetailDirty = false;
+    
     // Show view mode, hide edit mode
     document.getElementById('detail-view-mode').style.display = 'block';
     document.getElementById('detail-edit-mode').style.display = 'none';
@@ -609,6 +649,9 @@ async function saveEditEntry(event) {
         if (updatedRadarEntry) {
             // Update current entry reference
             currentDetailEntry = updatedRadarEntry;
+            
+            // Reset dirty flag after successful save
+            isDetailDirty = false;
             
             // First switch back to view mode
             document.getElementById('detail-view-mode').style.display = 'block';
