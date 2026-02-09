@@ -734,8 +734,30 @@ function renderRadar(data, searchTerm = '') {
     }
 }
 
-function showDetail(entry) {
-    if (currentMode !== 'view') return;
+async function showDetail(entry) {
+    // Check if we're in edit mode in the detail panel (not the global mode)
+    const isEditingDetail = document.getElementById('detail-edit-mode').style.display !== 'none';
+    
+    // If editing with unsaved changes, ask user to save first
+    if (isEditingDetail && isDetailDirty) {
+        const save = confirm('You have unsaved changes. Do you want to save them before viewing another entry?\n\nClick OK to save, or Cancel to discard changes.');
+        if (save) {
+            // Save the current entry first - create a fake event object
+            const fakeEvent = { preventDefault: () => {} };
+            await saveEditEntry(fakeEvent);
+            // Close edit mode
+            cancelEditEntry();
+            // Fall through to show the new entry
+        } else {
+            // Discard changes and show new entry
+            cancelEditEntry();
+            // Fall through to show the new entry
+        }
+    } else if (isEditingDetail) {
+        // In edit mode but no changes - just close edit mode and show new entry
+        cancelEditEntry();
+        // Fall through to show the new entry
+    }
     
     currentDetailEntry = entry;
     
