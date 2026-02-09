@@ -184,56 +184,97 @@ function updateFormDatalists(data) {
     updateStatusDatalist(data);
 }
 
-function updateDatalist(selectId, configItems, entries, fieldName) {
-    const select = document.getElementById(selectId);
-    if (!select) {
-        console.warn(`Select element not found: ${selectId}`);
+function updateDatalist(elementId, configItems, entries, fieldName) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`Element not found: ${elementId}`);
         return;
     }
     
-    const valueSet = new Set();
+    // For rings, preserve config order; for others, collect all values
+    let orderedValues = [];
+    const configValueSet = new Set();
+    const configValueMap = new Map(); // Map lowercase -> original case
     
-    // Add configured items first (from config.yml)
+    // Add configured items first (from config.yml) - preserve order
     if (configItems && Array.isArray(configItems)) {
         configItems.forEach(item => {
             if (item.name) {
-                valueSet.add(item.name);
+                orderedValues.push(item.name);
+                configValueSet.add(item.name.toLowerCase());
+                configValueMap.set(item.name.toLowerCase(), item.name);
             }
         });
     }
     
-    // Add all unique values from entries (from Excel data)
+    // Add unique values from entries (from Excel data) that aren't in config
+    const additionalValues = new Set();
     if (entries && Array.isArray(entries)) {
         entries.forEach(entry => {
             const value = entry[fieldName];
             if (value && typeof value === 'string' && value.trim()) {
-                valueSet.add(value.trim());
+                const trimmedValue = value.trim();
+                const lowerValue = trimmedValue.toLowerCase();
+                // Only add if not in config (case-insensitive check)
+                if (!configValueSet.has(lowerValue)) {
+                    additionalValues.add(trimmedValue);
+                }
             }
         });
     }
     
-    // Get current value before clearing
-    const currentValue = select.value;
+    // For rings (edit-ring), keep config order; for others, sort additional values
+    if (elementId === 'edit-ring') {
+        // Rings: config order first, then sorted additional values
+        const sortedAdditional = Array.from(additionalValues).sort();
+        orderedValues = [...orderedValues, ...sortedAdditional];
+    } else {
+        // Quadrants/status: sort all values alphabetically
+        orderedValues = [...orderedValues, ...Array.from(additionalValues)].sort();
+    }
     
-    // Update the select - keep the first "-- Select --" option
-    const firstOption = select.options[0];
-    select.innerHTML = '';
-    select.appendChild(firstOption);
+    console.log(`Populating ${elementId} with ${orderedValues.length} values:`, orderedValues);
     
-    const sortedValues = Array.from(valueSet).sort();
-    
-    console.log(`Populating ${selectId} with ${sortedValues.length} values:`, sortedValues);
-    
-    sortedValues.forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        select.appendChild(option);
-    });
-    
-    // Restore previous value if it exists in the new options
-    if (currentValue) {
-        select.value = currentValue;
+    // Check if this is a select or input+datalist
+    if (element.tagName === 'SELECT') {
+        // Get current value before clearing
+        const currentValue = element.value;
+        
+        // Update the select - keep the first "-- Select --" option
+        const firstOption = element.options[0];
+        element.innerHTML = '';
+        element.appendChild(firstOption);
+        
+        orderedValues.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            element.appendChild(option);
+        });
+        
+        // Restore previous value if it exists in the new options
+        if (currentValue) {
+            element.value = currentValue;
+        }
+    } else if (element.tagName === 'INPUT' && element.hasAttribute('list')) {
+        // This is an input with a datalist
+        const datalistId = element.getAttribute('list');
+        let datalist = document.getElementById(datalistId);
+        
+        // Create datalist if it doesn't exist
+        if (!datalist) {
+            datalist = document.createElement('datalist');
+            datalist.id = datalistId;
+            element.parentNode.appendChild(datalist);
+        }
+        
+        // Clear and populate datalist
+        datalist.innerHTML = '';
+        orderedValues.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            datalist.appendChild(option);
+        });
     }
 }
 
@@ -946,16 +987,17 @@ async function saveEditEntry(event) {
         link: document.getElementById('edit-link').value || null
     };
     
-    // Validate required fields
-    if (!entryData.name || !entryData.ring || !entryData.quadrant) {
-        alert('Name, Ring, and Quadrant are required fields.');
+    // Validate required fields (quadrant is optional)
+    if (!entryData.name || !entryData.ring) {
+        alert('Name and Ring are required fields.');
         return;
     }
     
     try {
         let response;
+        const isNewEntry = !currentDetailEntry;
         
-        if (!currentDetailEntry) {
+        if (isNewEntry) {
             // Creating a new entry - POST to /rows endpoint
             response = await apiCall(`/projects/${currentProjectId}/rows`, {
                 method: 'POST',
@@ -989,7 +1031,7 @@ async function saveEditEntry(event) {
         }
         
         // Find the updated entry in the new radar data
-        const updatedRadarEntry = radarData.entries.find(e => e.name === updatedEntry.name);
+        const updatedRadarEntry = radarData.entries.find(e => e.name === entryData.name);
         
         console.log('Updated entry from radar:', updatedRadarEntry);
         console.log('linkName:', updatedRadarEntry?.linkName);
@@ -1011,7 +1053,7 @@ async function saveEditEntry(event) {
         }
         
         // Show success message (after mode switch to avoid UI glitch)
-        const successMessage = currentDetailEntry ? 'Entry updated successfully!' : 'Entry created successfully!';
+        const successMessage = isNewEntry ? 'Entry created successfully!' : 'Entry updated successfully!';
         setTimeout(() => {
             alert(successMessage);
         }, 100);

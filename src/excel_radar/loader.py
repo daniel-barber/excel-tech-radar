@@ -82,7 +82,7 @@ class RadarEntry(BaseModel):
     id: str
     name: str
     ring: str
-    quadrant: str
+    quadrant: Optional[str] = None  # Optional for simple circular radars
     isNew: bool = False
     status: Optional[str] = None
     descriptionHtml: str = ""
@@ -184,11 +184,13 @@ def auto_discover_config(
     sheet_name: str = "Radar",
     title: str = "Technology Radar",
     subtitle: str = "",
+    config_path: Optional[Path] = None,
 ) -> RadarConfig:
     """
     Auto-discover rings and quadrants from Excel file.
     
-    Reads the Excel file and creates a configuration based on unique values
+    If config_path is provided or config.yml exists in project root, use rings from there.
+    Otherwise, reads the Excel file and creates a configuration based on unique values
     in the ring and quadrant columns. Assigns default colors and ordering.
     
     Args:
@@ -196,6 +198,7 @@ def auto_discover_config(
         sheet_name: Name of sheet to read
         title: Radar title
         subtitle: Radar subtitle
+        config_path: Optional path to config.yml (if not provided, looks in project root)
         
     Returns:
         Auto-generated RadarConfig
@@ -207,6 +210,21 @@ def auto_discover_config(
     if not excel_path.exists():
         raise FileNotFoundError(f"Excel file not found: {excel_path}")
     
+    # Try to find config.yml - check provided path, then project root, then Excel directory
+    config_rings = []
+    
+    if config_path is None:
+        # Look for config.yml in project root (2 levels up from data/)
+        config_path = excel_path.parent.parent / "config.yml"
+    
+    if config_path and config_path.exists():
+        try:
+            config = load_config(config_path)
+            config_rings = [ring.name for ring in config.rings]
+            # Don't load quadrants from config - keep them flexible and Excel-based
+        except Exception:
+            pass  # If config loading fails, fall back to auto-discovery
+    
     # Read Excel file
     try:
         df = pd.read_excel(excel_path, sheet_name=sheet_name, engine="openpyxl")
@@ -217,30 +235,38 @@ def auto_discover_config(
     if "ring" not in df.columns or "quadrant" not in df.columns:
         raise ValueError("Excel file must have 'ring' and 'quadrant' columns")
     
-    # Get unique rings (preserve order of first appearance)
-    unique_rings = []
+    # Get unique rings from Excel (preserve order of first appearance)
+    excel_rings = []
     seen_rings = set()
     for ring in df["ring"].dropna():
         ring_str = str(ring).strip()
         ring_slug = slugify(ring_str)
         if ring_slug not in seen_rings:
-            unique_rings.append(ring_str)
+            excel_rings.append(ring_str)
             seen_rings.add(ring_slug)
     
-    # Get unique quadrants (preserve order of first appearance)
-    unique_quadrants = []
+    # Get unique quadrants from Excel (preserve order of first appearance)
+    excel_quadrants = []
     seen_quadrants = set()
     for quadrant in df["quadrant"].dropna():
         quad_str = str(quadrant).strip()
         quad_slug = slugify(quad_str)
         if quad_slug not in seen_quadrants:
-            unique_quadrants.append(quad_str)
+            excel_quadrants.append(quad_str)
             seen_quadrants.add(quad_slug)
     
-    # If Excel is empty, use default rings (no quadrants by default)
-    if not unique_rings:
+    # Use config rings if available, otherwise use Excel rings or defaults
+    if config_rings:
+        unique_rings = config_rings
+    elif excel_rings:
+        unique_rings = excel_rings
+    else:
         unique_rings = ["Ready", "<1 Year", "1-3 Years", "3+ Years"]
-    if not unique_quadrants:
+    
+    # For quadrants, only use Excel values (don't load from config - keep flexible)
+    if excel_quadrants:
+        unique_quadrants = excel_quadrants
+    else:
         unique_quadrants = []  # No quadrants by default - simple circular radar
     
     # Default ring colors - modern refined palette (cycle through if more rings than colors)
@@ -405,15 +431,18 @@ def load_excel(
             )
         ring_id = ring_ids[ring_slug]
         
-        # Map quadrant
-        quad_value = str(row[col_map.quadrant]).strip() if not pd.isna(row[col_map.quadrant]) else ""
-        quad_slug = slugify(quad_value)
-        if quad_slug not in quadrant_ids:
-            raise ValueError(
-                f"Row {idx + 2}: Unknown quadrant '{quad_value}'. "
-                f"Valid quadrants: {[q.name for q in config.quadrants]}"
-            )
-        quadrant_id = quadrant_ids[quad_slug]
+        # Map quadrant (optional - can be empty for simple circular radars)
+        quadrant_id = None
+        if col_map.quadrant in df.columns and not pd.isna(row[col_map.quadrant]):
+            quad_value = str(row[col_map.quadrant]).strip()
+            if quad_value:  # Only validate if not empty
+                quad_slug = slugify(quad_value)
+                if quad_slug not in quadrant_ids:
+                    raise ValueError(
+                        f"Row {idx + 2}: Unknown quadrant '{quad_value}'. "
+                        f"Valid quadrants: {[q.name for q in config.quadrants]}"
+                    )
+                quadrant_id = quadrant_ids[quad_slug]
         
         # Note: isNew column is deprecated and ignored for backward compatibility
         # Old Excel files may still have this column, but we now use status field instead
