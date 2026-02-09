@@ -74,16 +74,101 @@
             <!-- Detail View -->
             <div id="detail-view" class="detail-view">
                 <button id="close-detail" class="close-btn">×</button>
-                <h2 id="detail-name"></h2>
-                <div class="detail-meta">
-                    <span id="detail-ring" class="badge"></span>
-                    <span id="detail-quadrant" class="badge"></span>
-                    <span id="detail-status" class="badge"></span>
+                
+                <!-- View Mode -->
+                <div id="detail-view-mode">
+                    <div class="detail-header">
+                        <h2 id="detail-name"></h2>
+                        <button id="edit-entry-btn" class="edit-btn">✏️ Edit</button>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3>Classification</h3>
+                        <div class="detail-meta">
+                            <span id="detail-ring" class="badge"></span>
+                            <span id="detail-quadrant" class="badge"></span>
+                            <span id="detail-status" class="badge"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3>Flags</h3>
+                        <div class="detail-flags">
+                            <span id="detail-isnew" class="flag-badge"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section" id="detail-tags-section" style="display:none;">
+                        <h3>Tags</h3>
+                        <div id="detail-tags" class="detail-tags"></div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3>Description</h3>
+                        <div id="detail-description" class="detail-description"></div>
+                    </div>
+                    
+                    <div class="detail-section" id="detail-link-section" style="display:none;">
+                        <h3>Link</h3>
+                        <a id="detail-link" class="detail-link" target="_blank" rel="noopener noreferrer"></a>
+                    </div>
                 </div>
-                <div id="detail-description" class="detail-description"></div>
-                <a id="detail-link" class="detail-link" target="_blank" rel="noopener noreferrer" style="display:none;"></a>
+                
+                <!-- Edit Mode -->
+                <div id="detail-edit-mode" style="display:none;">
+                    <h2>Edit Entry</h2>
+                    <form id="edit-entry-form" class="edit-form">
+                        <div class="form-group">
+                            <label for="edit-name">Name *</label>
+                            <input type="text" id="edit-name" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ring">Ring *</label>
+                            <select id="edit-ring" required></select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-quadrant">Quadrant *</label>
+                            <select id="edit-quadrant" required></select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-status">Status</label>
+                            <select id="edit-status">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="edit-isnew" />
+                                Is New
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-tags">Tags (comma-separated)</label>
+                            <input type="text" id="edit-tags" placeholder="tag1, tag2, tag3" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-description">Description (HTML allowed)</label>
+                            <textarea id="edit-description" rows="8"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-link">Link</label>
+                            <input type="url" id="edit-link" placeholder="https://..." />
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">💾 Save</button>
+                            <button type="button" id="cancel-edit-btn" class="secondary-btn">Cancel</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-
         </aside>
     </div>
 

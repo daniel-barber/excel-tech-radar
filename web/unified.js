@@ -3,10 +3,12 @@
 
 // ===== Global State =====
 let currentProject = null;
+let currentProjectId = null;
 let radarData = null;
 let gridApi = null;
 let isDirty = false;
 let currentMode = 'view'; // 'view' or 'edit'
+let currentDetailEntry = null;
 
 // ===== API Helpers =====
 async function apiCall(endpoint, options = {}) {
@@ -87,14 +89,49 @@ async function loadProjects() {
 }
 
 async function selectProject(projectId) {
+    // Check if already on this project
+    if (currentProject === projectId) {
+        return;
+    }
+    
+    // Check for unsaved changes in edit mode
+    if (currentMode === 'edit' && isDirty) {
+        const save = confirm('You have unsaved changes. Do you want to save before switching projects?');
+        if (save) {
+            try {
+                await saveExcelData();
+            } catch (error) {
+                console.error('Failed to save:', error);
+                const proceed = confirm('Failed to save. Switch anyway?');
+                if (!proceed) return;
+            }
+        } else {
+            const proceed = confirm('Discard unsaved changes and switch projects?');
+            if (!proceed) return;
+        }
+    }
+    
+    // Switch to view mode when changing projects
+    if (currentMode === 'edit') {
+        switchToViewMode();
+    }
+    
     // Update UI
     document.querySelectorAll('.project-item').forEach(item => {
         item.classList.toggle('active', item.dataset.projectId === projectId);
     });
     
     currentProject = projectId;
-    document.getElementById('active-project-name').textContent = 
+    currentProjectId = projectId;  // Set global project ID for API calls
+    document.getElementById('active-project-name').textContent =
         projectId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    // Reset dirty flag
+    isDirty = false;
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) {
+        saveBtn.style.display = 'none';
+    }
     
     // Load radar data
     await loadRadar(projectId);
@@ -414,6 +451,13 @@ function renderRadar(data) {
 function showDetail(entry) {
     if (currentMode !== 'view') return;
     
+    currentDetailEntry = entry;
+    
+    // Show detail view
+    const detailView = document.getElementById('detail-view');
+    detailView.classList.add('active');
+    
+    // Populate view mode
     document.getElementById('detail-name').textContent = entry.name;
     
     const ring = radarData.rings.find(r => r.id === entry.ring);
@@ -424,6 +468,7 @@ function showDetail(entry) {
     
     document.getElementById('detail-quadrant').textContent = quadrant.name;
     
+    // Status
     if (entry.status) {
         const status = radarData.statuses.find(s => s.id === entry.status);
         document.getElementById('detail-status').textContent = status.name;
@@ -433,14 +478,154 @@ function showDetail(entry) {
         document.getElementById('detail-status').style.display = 'none';
     }
     
+    // isNew flag
+    if (entry.isNew) {
+        document.getElementById('detail-isnew').textContent = 'NEW';
+        document.getElementById('detail-isnew').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-isnew').style.display = 'none';
+    }
+    
+    // Tags
+    if (entry.tags && entry.tags.length > 0) {
+        const tagsHtml = entry.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+        document.getElementById('detail-tags').innerHTML = tagsHtml;
+        document.getElementById('detail-tags-section').style.display = 'block';
+    } else {
+        document.getElementById('detail-tags-section').style.display = 'none';
+    }
+    
+    // Description
     document.getElementById('detail-description').innerHTML = entry.descriptionHtml || '<p>No description</p>';
     
+    // Link
     if (entry.link) {
         document.getElementById('detail-link').href = entry.link;
-        document.getElementById('detail-link').textContent = 'View Link →';
-        document.getElementById('detail-link').style.display = 'inline-block';
+        document.getElementById('detail-link').textContent = entry.link;
+        document.getElementById('detail-link-section').style.display = 'block';
     } else {
-        document.getElementById('detail-link').style.display = 'none';
+        document.getElementById('detail-link-section').style.display = 'none';
+    }
+}
+
+function closeDetail() {
+    document.getElementById('detail-view').classList.remove('active');
+    document.getElementById('detail-view-mode').style.display = 'block';
+    document.getElementById('detail-edit-mode').style.display = 'none';
+    currentDetailEntry = null;
+}
+
+function showEditEntryForm() {
+    if (!currentDetailEntry) return;
+    
+    // Hide view mode, show edit mode
+    document.getElementById('detail-view-mode').style.display = 'none';
+    document.getElementById('detail-edit-mode').style.display = 'block';
+    
+    // Populate form with current entry data
+    document.getElementById('edit-name').value = currentDetailEntry.name;
+    document.getElementById('edit-ring').value = currentDetailEntry.ring;
+    document.getElementById('edit-quadrant').value = currentDetailEntry.quadrant;
+    document.getElementById('edit-status').value = currentDetailEntry.status || '';
+    document.getElementById('edit-isnew').checked = currentDetailEntry.isNew || false;
+    document.getElementById('edit-tags').value = currentDetailEntry.tags ? currentDetailEntry.tags.join(', ') : '';
+    document.getElementById('edit-description').value = currentDetailEntry.descriptionHtml || '';
+    document.getElementById('edit-link').value = currentDetailEntry.link || '';
+    
+    // Populate ring options
+    const ringSelect = document.getElementById('edit-ring');
+    ringSelect.innerHTML = radarData.rings.map(r =>
+        `<option value="${r.id}">${r.name}</option>`
+    ).join('');
+    ringSelect.value = currentDetailEntry.ring;
+    
+    // Populate quadrant options
+    const quadrantSelect = document.getElementById('edit-quadrant');
+    quadrantSelect.innerHTML = radarData.quadrants.map(q =>
+        `<option value="${q.id}">${q.name}</option>`
+    ).join('');
+    quadrantSelect.value = currentDetailEntry.quadrant;
+    
+    // Populate status options
+    const statusSelect = document.getElementById('edit-status');
+    statusSelect.innerHTML = '<option value="">None</option>' +
+        radarData.statuses.map(s =>
+            `<option value="${s.id}">${s.name}</option>`
+        ).join('');
+    statusSelect.value = currentDetailEntry.status || '';
+}
+
+function cancelEditEntry() {
+    // Show view mode, hide edit mode
+    document.getElementById('detail-view-mode').style.display = 'block';
+    document.getElementById('detail-edit-mode').style.display = 'none';
+}
+
+async function saveEditEntry(event) {
+    event.preventDefault();
+    
+    if (!currentDetailEntry || !currentProjectId) return;
+    
+    // Get form data
+    const updatedEntry = {
+        name: document.getElementById('edit-name').value,
+        ring: document.getElementById('edit-ring').value,
+        quadrant: document.getElementById('edit-quadrant').value,
+        status: document.getElementById('edit-status').value || null,
+        isNew: document.getElementById('edit-isnew').checked,
+        tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
+        description: document.getElementById('edit-description').value,
+        link: document.getElementById('edit-link').value || null
+    };
+    
+    try {
+        // Get all Excel data to find row index
+        const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
+        const allRows = excelResponse.rows || [];
+        
+        // Find the row index
+        const rowIndex = allRows.findIndex(row => row.name === currentDetailEntry.name);
+        
+        if (rowIndex === -1) {
+            throw new Error('Entry not found in Excel data');
+        }
+        
+        // Update single row via API
+        const response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedEntry)
+        });
+        
+        // Update radar data from response
+        if (response.radar) {
+            radarData = response.radar;
+            renderRadar(radarData);
+        }
+        
+        // Find the updated entry in the new radar data
+        const updatedRadarEntry = radarData.entries.find(e => e.name === updatedEntry.name);
+        
+        if (updatedRadarEntry) {
+            // Update current entry reference
+            currentDetailEntry = updatedRadarEntry;
+            
+            // First switch back to view mode
+            document.getElementById('detail-view-mode').style.display = 'block';
+            document.getElementById('detail-edit-mode').style.display = 'none';
+            
+            // Then update the view mode with new data
+            showDetail(updatedRadarEntry);
+        }
+        
+        // Show success message (after mode switch to avoid UI glitch)
+        setTimeout(() => {
+            alert('Entry updated successfully!');
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error saving entry:', error);
+        alert('Failed to save entry: ' + error.message);
     }
 }
 
@@ -467,9 +652,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refresh-grid-btn').addEventListener('click', refreshGrid);
     
     // Close detail
-    document.getElementById('close-detail').addEventListener('click', () => {
-        // Could hide detail panel or clear it
-    });
+    document.getElementById('close-detail').addEventListener('click', closeDetail);
+    
+    // Edit entry button
+    document.getElementById('edit-entry-btn').addEventListener('click', showEditEntryForm);
+    
+    // Cancel edit entry
+    document.getElementById('cancel-edit-btn').addEventListener('click', cancelEditEntry);
+    
+    // Save edit entry form
+    document.getElementById('edit-entry-form').addEventListener('submit', saveEditEntry);
     
     // Search
     document.getElementById('search').addEventListener('input', (e) => {

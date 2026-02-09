@@ -248,6 +248,70 @@ class RadarAPI:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
+        @self.app.route('/api/projects/<project_id>/rows/<int:row_index>', methods=['PUT'])
+        def update_row(project_id: str, row_index: int):
+            """Update a single row in Excel."""
+            try:
+                excel_file = self.data_dir / f"{project_id}.xlsx"
+                if not excel_file.exists():
+                    return jsonify({'error': 'File not found'}), 404
+                
+                row_data = request.json
+                
+                # Determine sheet name
+                try:
+                    xls = pd.ExcelFile(excel_file)
+                    sheet_name = 'Radar' if 'Radar' in xls.sheet_names else xls.sheet_names[0]
+                except:
+                    sheet_name = 'Sheet1'
+                
+                # Read existing data
+                df = pd.read_excel(excel_file, sheet_name=sheet_name)
+                
+                if row_index < 0 or row_index >= len(df):
+                    return jsonify({'error': 'Invalid row index'}), 400
+                
+                # Update the row - handle data type conversions
+                for key, value in row_data.items():
+                    if key in df.columns:
+                        # Convert tags array to comma-separated string
+                        if key == 'tags' and isinstance(value, list):
+                            value = ', '.join(value) if value else ''
+                        # Convert boolean to proper format
+                        elif key == 'isNew' and isinstance(value, bool):
+                            value = value
+                        # Handle None/null values based on column dtype
+                        elif value is None or value == '':
+                            # For numeric columns, use None (becomes NaN in pandas)
+                            if pd.api.types.is_numeric_dtype(df[key]):
+                                value = None
+                            # For string columns, use empty string
+                            else:
+                                value = '' if value == '' else None
+                        
+                        df.at[row_index, key] = value
+                
+                # Backup original file
+                backup_file = excel_file.with_suffix('.xlsx.bak')
+                shutil.copy2(excel_file, backup_file)
+                
+                # Write back
+                df.to_excel(excel_file, sheet_name=sheet_name, index=False)
+                
+                # Rebuild radar
+                radar_data = self._build_radar_for_project(project_id)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Row updated',
+                    'radar': radar_data
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({'error': str(e)}), 500
+                return jsonify({'error': str(e)}), 500
+        
         @self.app.route('/api/projects', methods=['POST'])
         def create_project():
             """Create a new radar project."""
