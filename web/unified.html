@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel Tech Radar - Unified Interface</title>
+    <title>Radar Studio</title>
     <link rel="stylesheet" href="unified.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- html2canvas for PNG export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- AG Grid for Excel editing -->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
@@ -17,7 +19,7 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-left">
-                <h1>📡 Excel Tech Radar</h1>
+                <h1>📡 Radar Studio</h1>
                 <span id="active-project-name" class="project-name">No project selected</span>
             </div>
             <div class="header-right">
@@ -44,12 +46,7 @@
             <div id="radar-view" class="radar-view">
                 <div class="radar-controls">
                     <input type="text" id="search" placeholder="🔍 Search entries..." />
-                    <div class="zoom-controls">
-                        <button id="zoom-in" title="Zoom In">+</button>
-                        <button id="zoom-reset" title="Reset Zoom">⊙</button>
-                        <button id="zoom-out" title="Zoom Out">−</button>
-                        <button id="export-png" title="Export as PNG">📷</button>
-                    </div>
+                    <button id="export-png" class="export-btn" title="Export as PNG">📷 Export PNG</button>
                 </div>
                 <svg id="radar"></svg>
                 <div id="tooltip" class="tooltip hidden"></div>

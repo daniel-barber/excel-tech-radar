@@ -393,7 +393,7 @@ async function refreshGrid() {
 // ===== Radar Visualization =====
 // (Reuse code from app.js - simplified version here)
 
-function renderRadar(data) {
+function renderRadar(data, searchTerm = '') {
     const svg = d3.select('#radar');
     svg.selectAll('*').remove();
     
@@ -438,8 +438,18 @@ function renderRadar(data) {
             .text(quadrant.name);
     });
     
+    // Filter entries based on search term
+    const filteredEntries = searchTerm
+        ? data.entries.filter(entry => {
+            const searchLower = searchTerm.toLowerCase();
+            return entry.name.toLowerCase().includes(searchLower) ||
+                   (entry.tags && entry.tags.some(tag => tag.toLowerCase().includes(searchLower))) ||
+                   (entry.descriptionHtml && entry.descriptionHtml.toLowerCase().includes(searchLower));
+          })
+        : data.entries;
+    
     // Draw entries
-    data.entries.forEach(entry => {
+    filteredEntries.forEach(entry => {
         const ringIndex = data.rings.findIndex(r => r.id === entry.ring);
         const quadrantIndex = data.quadrants.findIndex(q => q.id === entry.quadrant);
         
@@ -453,6 +463,8 @@ function renderRadar(data) {
         
         g.append('circle')
             .attr('class', 'radar-dot')
+            .attr('data-entry-id', entry.id)
+            .attr('data-entry-name', entry.name)
             .attr('cx', x)
             .attr('cy', y)
             .attr('r', 8)
@@ -464,17 +476,44 @@ function renderRadar(data) {
         
         g.append('text')
             .attr('class', 'radar-label')
+            .attr('data-entry-id', entry.id)
             .attr('x', x)
             .attr('y', y + 18)
             .attr('text-anchor', 'middle')
             .text(entry.name);
     });
+    
+    // Show count of filtered results
+    if (searchTerm && filteredEntries.length < data.entries.length) {
+        console.log(`Showing ${filteredEntries.length} of ${data.entries.length} entries`);
+    }
 }
 
 function showDetail(entry) {
     if (currentMode !== 'view') return;
     
     currentDetailEntry = entry;
+    
+    // Highlight selected dot and fade others
+    d3.selectAll('.radar-dot')
+        .each(function() {
+            const entryName = d3.select(this).attr('data-entry-name');
+            const isSelected = entryName === entry.name;
+            
+            d3.select(this)
+                .style('opacity', isSelected ? 1 : 0.2)
+                .attr('stroke-width', isSelected ? 4 : (entry.isNew ? 3 : 1.5))
+                .attr('stroke', isSelected ? '#3b82f6' : '#333');
+        });
+    
+    d3.selectAll('.radar-label')
+        .each(function() {
+            const labelId = d3.select(this).attr('data-entry-id');
+            const isSelected = labelId === entry.id;
+            
+            d3.select(this)
+                .style('opacity', isSelected ? 1 : 0.2);
+        });
     
     // Show detail view
     const detailView = document.getElementById('detail-view');
@@ -542,6 +581,19 @@ function showDetail(entry) {
 }
 
 function closeDetail() {
+    // Reset all dots to normal opacity and styling
+    d3.selectAll('.radar-dot')
+        .style('opacity', 1)
+        .attr('stroke', '#333')
+        .attr('stroke-width', function() {
+            // Check if entry is new by looking at stroke-width
+            const currentWidth = parseFloat(d3.select(this).attr('stroke-width'));
+            return currentWidth > 2 ? 3 : 1.5;
+        });
+    
+    d3.selectAll('.radar-label')
+        .style('opacity', 1);
+    
     document.getElementById('detail-view').classList.remove('active');
     document.getElementById('detail-view-mode').style.display = 'block';
     document.getElementById('detail-edit-mode').style.display = 'none';
@@ -706,24 +758,113 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save edit entry form
     document.getElementById('edit-entry-form').addEventListener('submit', saveEditEntry);
     
-    // Search
+    // Search functionality
     document.getElementById('search').addEventListener('input', (e) => {
-        // TODO: Implement search filtering
+        const searchTerm = e.target.value.trim();
+        if (radarData) {
+            renderRadar(radarData, searchTerm);
+        }
     });
     
-    // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', () => {
-        // TODO: Implement zoom
-    });
-    document.getElementById('zoom-out').addEventListener('click', () => {
-        // TODO: Implement zoom
-    });
-    document.getElementById('zoom-reset').addEventListener('click', () => {
-        // TODO: Implement zoom reset
-    });
-    document.getElementById('export-png').addEventListener('click', () => {
-        // TODO: Implement PNG export
-    });
+    // Export PNG functionality
+    document.getElementById('export-png').addEventListener('click', exportRadarAsPNG);
 });
+
+// ===== PNG Export Function using html2canvas =====
+async function exportRadarAsPNG() {
+    try {
+        const svg = document.getElementById('radar');
+        
+        if (!svg) {
+            throw new Error('Radar SVG not found');
+        }
+        
+        // Helper function to format title: replace underscores with spaces and capitalize words
+        function formatTitle(str) {
+            return str
+                .replace(/_/g, ' ')  // Replace underscores with spaces
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
+        
+        // Create a temporary container for export
+        const exportContainer = document.createElement('div');
+        exportContainer.style.position = 'fixed';
+        exportContainer.style.left = '-9999px';
+        exportContainer.style.top = '0';
+        exportContainer.style.width = (svg.clientWidth + 80) + 'px';  // Add padding width
+        exportContainer.style.height = (svg.clientHeight + 140) + 'px';  // Add padding + title height
+        exportContainer.style.backgroundColor = '#ffffff';
+        exportContainer.style.padding = '40px';
+        exportContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        
+        // Add title with project name and timestamp
+        const title = document.createElement('div');
+        title.style.textAlign = 'center';
+        title.style.marginBottom = '20px';
+        
+        const rawProjectName = currentProject ? currentProject.replace('.xlsx', '') : 'Technology Radar';
+        const projectName = formatTitle(rawProjectName);
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        
+        title.innerHTML = `
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #1e293b;">
+                ${projectName}
+            </h2>
+            <p style="margin: 0; font-size: 14px; color: #64748b;">
+                Generated on ${dateStr} at ${timeStr}
+            </p>
+        `;
+        
+        // Clone the SVG
+        const svgClone = svg.cloneNode(true);
+        svgClone.style.display = 'block';
+        svgClone.style.margin = '0 auto';
+        svgClone.setAttribute('width', svg.clientWidth);
+        svgClone.setAttribute('height', svg.clientHeight);
+        
+        exportContainer.appendChild(title);
+        exportContainer.appendChild(svgClone);
+        document.body.appendChild(exportContainer);
+        
+        // Use html2canvas to capture the container
+        const canvas = await html2canvas(exportContainer, {
+            backgroundColor: '#ffffff',
+            scale: 2, // Higher quality
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: svg.clientWidth + 80,
+            height: svg.clientHeight + 140
+        });
+        
+        // Remove temporary container
+        document.body.removeChild(exportContainer);
+        
+        // Convert canvas to blob and download
+        canvas.toBlob(function(blob) {
+            if (!blob) {
+                throw new Error('Failed to create image blob');
+            }
+            
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const downloadName = rawProjectName.replace(/_/g, '-');
+            link.download = `${downloadName}-${timestamp}.png`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            
+            // Clean up
+            setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        }, 'image/png');
+        
+    } catch (error) {
+        console.error('Error exporting PNG:', error);
+        alert('Failed to export PNG: ' + (error.message || 'Unknown error'));
+    }
+}
 
 // Made with Bob
