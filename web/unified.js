@@ -165,8 +165,132 @@ async function loadRadar(projectId) {
     try {
         radarData = await apiCall(`/projects/${projectId}`);
         renderRadar(radarData);
+        updateFormDatalists(radarData);
     } catch (error) {
         console.error('Failed to load radar:', error);
+    }
+}
+
+function updateFormDatalists(data) {
+    if (!data) return;
+    
+    // Update rings select
+    updateDatalist('edit-ring', data.rings, data.entries, 'ring');
+    
+    // Update quadrants select
+    updateDatalist('edit-quadrant', data.quadrants, data.entries, 'quadrant');
+    
+    // Update status select
+    updateStatusDatalist(data);
+}
+
+function updateDatalist(selectId, configItems, entries, fieldName) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        console.warn(`Select element not found: ${selectId}`);
+        return;
+    }
+    
+    const valueSet = new Set();
+    
+    // Add configured items first (from config.yml)
+    if (configItems && Array.isArray(configItems)) {
+        configItems.forEach(item => {
+            if (item.name) {
+                valueSet.add(item.name);
+            }
+        });
+    }
+    
+    // Add all unique values from entries (from Excel data)
+    if (entries && Array.isArray(entries)) {
+        entries.forEach(entry => {
+            const value = entry[fieldName];
+            if (value && typeof value === 'string' && value.trim()) {
+                valueSet.add(value.trim());
+            }
+        });
+    }
+    
+    // Get current value before clearing
+    const currentValue = select.value;
+    
+    // Update the select - keep the first "-- Select --" option
+    const firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    const sortedValues = Array.from(valueSet).sort();
+    
+    console.log(`Populating ${selectId} with ${sortedValues.length} values:`, sortedValues);
+    
+    sortedValues.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+    
+    // Restore previous value if it exists in the new options
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+function updateStatusDatalist(data) {
+    const select = document.getElementById('edit-status');
+    if (!select) {
+        console.warn('Status select not found');
+        return;
+    }
+    
+    // Get unique status values from current data
+    const statusSet = new Set();
+    
+    // Add standard suggestions first
+    statusSet.add('new');
+    statusSet.add('moved in');
+    statusSet.add('moved out');
+    statusSet.add('unchanged');
+    
+    // Add all unique status values from entries
+    if (data && data.entries) {
+        data.entries.forEach(entry => {
+            if (entry.status && entry.status.trim()) {
+                statusSet.add(entry.status.trim());
+            }
+        });
+    }
+    
+    // Get current value before clearing
+    const currentValue = select.value;
+    
+    // Keep the first "-- Select Status --" option
+    const firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    // Convert to array and sort (standard ones first, then alphabetically)
+    const standardStatuses = ['new', 'moved in', 'moved out', 'unchanged'];
+    const customStatuses = Array.from(statusSet)
+            .filter(s => !standardStatuses.includes(s))
+            .sort();
+        
+    const allStatuses = [...standardStatuses, ...customStatuses];
+    
+    console.log(`Populating edit-status with ${allStatuses.length} values:`, allStatuses);
+    
+    allStatuses.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        // Capitalize first letter for display
+        option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        select.appendChild(option);
+    });
+    
+    // Restore previous value if it exists in the new options
+    if (currentValue) {
+        select.value = currentValue;
     }
 }
 
@@ -673,20 +797,8 @@ function showEditEntryForm() {
     const descriptionHtml = currentDetailEntry.descriptionHtml || '';
     quillEditor.root.innerHTML = descriptionHtml;
     
-    // Populate ring datalist options
-    const ringDatalist = document.getElementById('ring-options');
-    ringDatalist.innerHTML = radarData.rings.map(r =>
-        `<option value="${r.id}">${r.name}</option>`
-    ).join('');
-    
-    // Populate quadrant datalist options
-    const quadrantDatalist = document.getElementById('quadrant-options');
-    quadrantDatalist.innerHTML = radarData.quadrants.map(q =>
-        `<option value="${q.id}">${q.name}</option>`
-    ).join('');
-    
-    // Status datalist is already populated in HTML with common values
-    // Users can type custom status values
+    // Populate all datalists with config + Excel values
+    updateFormDatalists(radarData);
     
     // Reset dirty flag when entering edit mode
     isDetailDirty = false;
