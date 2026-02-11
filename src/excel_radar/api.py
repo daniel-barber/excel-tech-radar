@@ -527,6 +527,82 @@ class RadarAPI:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
+        @self.app.route('/api/template/download', methods=['GET'])
+        def download_template():
+            """Download Excel template for importing projects."""
+            try:
+                template_dir = Path(__file__).parent.parent.parent / 'templates'
+                template_file = template_dir / 'radar_template.xlsx'
+                
+                if not template_file.exists():
+                    return jsonify({'error': 'Template file not found'}), 404
+                
+                return send_file(
+                    template_file,
+                    as_attachment=True,
+                    download_name='radar_template.xlsx',
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/upload', methods=['POST'])
+        def upload_project():
+            """Upload an Excel file to create a new project."""
+            try:
+                # Check if file is present
+                if 'file' not in request.files:
+                    return jsonify({'error': 'No file provided'}), 400
+                
+                file = request.files['file']
+                
+                if file.filename == '':
+                    return jsonify({'error': 'No file selected'}), 400
+                
+                # Validate file extension
+                if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+                    return jsonify({'error': 'Invalid file type. Please upload an Excel file (.xlsx or .xls)'}), 400
+                
+                # Generate project ID from filename
+                filename = file.filename.rsplit('.', 1)[0]  # Remove extension
+                project_id = re.sub(r'[^a-z0-9_-]+', '_', filename.lower())
+                
+                # Check if project already exists
+                excel_file = self.data_dir / f"{project_id}.xlsx"
+                if excel_file.exists():
+                    return jsonify({'error': f'Project "{filename}" already exists'}), 409
+                
+                # Save the file
+                file.save(str(excel_file))
+                
+                # Set document properties with original filename
+                try:
+                    wb = load_workbook(excel_file)
+                    wb.properties.title = filename
+                    wb.save(excel_file)
+                except Exception as e:
+                    print(f"Warning: Could not set document properties: {e}")
+                
+                # Validate the file can be loaded
+                try:
+                    radar_data = self._build_radar_for_project(project_id)
+                except Exception as e:
+                    # Delete the file if validation fails
+                    excel_file.unlink()
+                    return jsonify({'error': f'Invalid Excel file: {str(e)}'}), 400
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Project uploaded successfully',
+                    'project_id': project_id,
+                    'project_name': filename
+                })
+                
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({'error': str(e)}), 500
+        
         # Serve static files
         @self.app.route('/')
         def index():

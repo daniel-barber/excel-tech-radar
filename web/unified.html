@@ -36,7 +36,10 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>Projects</h2>
-                <button id="new-project-btn" class="new-btn">+ New</button>
+                <div class="sidebar-actions">
+                    <button id="import-project-btn" class="import-btn" title="Import from Excel">Import</button>
+                    <button id="new-project-btn" class="new-btn">+ New</button>
+                </div>
             </div>
             <div id="project-list" class="project-list">
                 <div class="loading">Loading projects...</div>
@@ -127,8 +130,8 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="edit-quadrant">Quadrant</label>
-                            <input type="text" id="edit-quadrant" list="quadrant-options" placeholder="None or type new quadrant...">
+                            <label for="edit-quadrant">Quadrant *</label>
+                            <input type="text" id="edit-quadrant" list="quadrant-options" placeholder="Type quadrant name..." required>
                             <datalist id="quadrant-options">
                             </datalist>
                         </div>
@@ -180,6 +183,73 @@
             <div class="modal-actions">
                 <button id="create-project-btn" class="primary-btn">Create</button>
                 <button id="cancel-project-btn" class="secondary-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Project Modal -->
+    <div id="import-project-modal" class="modal" style="display:none;">
+        <div class="modal-content import-modal-content">
+            <button class="modal-close" id="close-import-modal">×</button>
+            <h2>📥 Import Radar Project</h2>
+            
+            <div class="import-instructions">
+                <p class="import-intro">
+                    Import an existing radar project from an Excel file. You can download a template or drag and drop your file.
+                </p>
+                
+                <div class="import-steps">
+                    <div class="import-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Download Template</h3>
+                            <p>Download the Excel template with the correct structure and sample data.</p>
+                            <a href="/api/template/download" class="download-btn" download>
+                                📄 Download Template
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="import-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Fill in Your Data</h3>
+                            <p>Open the template and add your radar entries. The template includes:</p>
+                            <ul>
+                                <li><strong>Sheet1</strong>: Your radar data with columns for name, ring, quadrant (required), status, description, tags, link, and linkName</li>
+                                <li><strong>Instructions</strong>: Detailed column descriptions and tips</li>
+                            </ul>
+                            <p class="tip">💡 <strong>Tip:</strong> Delete or replace the sample rows with your own data.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="import-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Upload Your File</h3>
+                            <p>Drag and drop your Excel file below, or click to browse.</p>
+                            <div id="drop-zone" class="drop-zone">
+                                <div class="drop-zone-content">
+                                    <p class="drop-zone-icon">📁</p>
+                                    <p class="drop-zone-text">Drag & drop your Excel file here</p>
+                                    <p class="drop-zone-or">or</p>
+                                    <button type="button" id="browse-file-btn" class="browse-btn">Browse Files</button>
+                                    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none;" />
+                                </div>
+                                <div id="upload-progress" class="upload-progress" style="display:none;">
+                                    <p id="upload-status">Uploading...</p>
+                                    <div class="progress-bar">
+                                        <div id="progress-fill" class="progress-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="close-import-modal-btn" class="secondary-btn">Close</button>
             </div>
         </div>
     </div>

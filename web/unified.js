@@ -1456,4 +1456,143 @@ async function exportRadarAsPNG() {
     }
 }
 
+// ===== Import Project Modal =====
+function showImportModal() {
+    const modal = document.getElementById('import-project-modal');
+    modal.style.display = 'flex';
+    
+    // Reset drop zone
+    const dropZone = document.getElementById('drop-zone');
+    const uploadProgress = document.getElementById('upload-progress');
+    const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+    
+    dropZoneContent.style.display = 'flex';
+    uploadProgress.style.display = 'none';
+}
+
+function hideImportModal() {
+    const modal = document.getElementById('import-project-modal');
+    modal.style.display = 'none';
+}
+
+async function handleFileUpload(file) {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        alert('Please upload an Excel file (.xlsx or .xls)');
+        return;
+    }
+    
+    const dropZone = document.getElementById('drop-zone');
+    const uploadProgress = document.getElementById('upload-progress');
+    const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+    const uploadStatus = document.getElementById('upload-status');
+    const progressFill = document.getElementById('progress-fill');
+    
+    // Show progress
+    dropZoneContent.style.display = 'none';
+    uploadProgress.style.display = 'block';
+    uploadStatus.textContent = 'Uploading...';
+    progressFill.style.width = '30%';
+    
+    try {
+        // Create FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Upload file
+        const response = await fetch('/api/projects/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        progressFill.style.width = '70%';
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+        
+        const result = await response.json();
+        progressFill.style.width = '100%';
+        uploadStatus.textContent = 'Upload successful! Refreshing projects...';
+        
+        // Wait a moment then refresh projects
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Refresh project list
+        await loadProjects();
+        
+        // Close modal
+        hideImportModal();
+        
+        // Show success message
+        alert(`Project "${result.project_name}" imported successfully!`);
+        
+        // Load the new project
+        if (result.project_id) {
+            await loadProject(result.project_id);
+        }
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        uploadStatus.textContent = 'Upload failed: ' + error.message;
+        progressFill.style.width = '0%';
+        
+        // Show error and reset after delay
+        setTimeout(() => {
+            dropZoneContent.style.display = 'flex';
+            uploadProgress.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Event listeners for import modal
+document.getElementById('import-project-btn').addEventListener('click', showImportModal);
+document.getElementById('close-import-modal').addEventListener('click', hideImportModal);
+document.getElementById('close-import-modal-btn').addEventListener('click', hideImportModal);
+
+// Close modal when clicking outside
+document.getElementById('import-project-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'import-project-modal') {
+        hideImportModal();
+    }
+});
+
+// Drag and drop handlers
+const dropZone = document.getElementById('drop-zone');
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileUpload(files[0]);
+    }
+});
+
+// Browse button handler
+document.getElementById('browse-file-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+    const files = e.target.files;
+    if (files.length > 0) {
+        handleFileUpload(files[0]);
+    }
+});
+
 // Made with Bob

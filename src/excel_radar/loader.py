@@ -82,7 +82,7 @@ class RadarEntry(BaseModel):
     id: str
     name: str
     ring: str
-    quadrant: Optional[str] = None  # Optional for simple circular radars
+    quadrant: str  # Required field
     isNew: bool = False
     status: Optional[str] = None
     descriptionHtml: str = ""
