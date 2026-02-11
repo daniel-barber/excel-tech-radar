@@ -7,6 +7,9 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
+# Constants
+MAX_TEMPLATE_ROWS = 1000
+
 def create_template():
     """Create Excel template with sample data and instructions."""
     wb = Workbook()
@@ -36,34 +39,34 @@ def create_template():
     # Sample data rows
     sample_data = [
         [
-            "Cloud Migration Strategy",
-            "Ready",
-            "Infrastructure",
-            "On Track",
-            "<p>Comprehensive strategy for migrating legacy applications to cloud infrastructure. Includes assessment, planning, and execution phases.</p>",
-            "cloud, migration, infrastructure",
-            "https://example.com/cloud-strategy",
-            "View Strategy Doc"
+            'Cloud Migration Strategy',
+            'Ready',
+            'Infrastructure',
+            'On Track',
+            '<p>Comprehensive strategy for migrating legacy applications to cloud infrastructure. Includes assessment, planning, and execution phases.</p>',
+            'cloud, migration, infrastructure',
+            'https://example.com/cloud-strategy',
+            'View Strategy Doc'
         ],
         [
-            "AI-Powered Analytics Platform",
-            "Less Than 1 Year",
-            "Applications",
-            "New",
-            "<p>Next-generation analytics platform leveraging <strong>machine learning</strong> and AI to provide predictive insights.</p>",
-            "AI, analytics, machine-learning",
-            "https://example.com/ai-analytics",
-            "Platform Overview"
+            'AI-Powered Analytics Platform',
+            'Less Than 1 Year',
+            'Applications',
+            'New',
+            '<p>Next-generation analytics platform leveraging <strong>machine learning</strong> and AI to provide predictive insights.</p>',
+            'AI, analytics, machine-learning',
+            'https://example.com/ai-analytics',
+            'Platform Overview'
         ],
         [
-            "Quantum Computing Research",
-            "3+ Years",
-            "Emerging Tech",
-            "Blocked",
-            "<p>Long-term research initiative exploring quantum computing applications for optimization problems.</p>",
-            "quantum, research, innovation",
-            "",
-            ""
+            'Quantum Computing Research',
+            '3+ Years',
+            'Emerging Tech',
+            'Blocked',
+            '<p>Long-term research initiative exploring quantum computing applications for optimization problems.</p>',
+            'quantum, research, innovation',
+            '',
+            ''
         ]
     ]
     
@@ -76,7 +79,7 @@ def create_template():
     ring_validation.error = 'Please select a valid ring value'
     ring_validation.errorTitle = 'Invalid Ring'
     ws_data.add_data_validation(ring_validation)
-    ring_validation.add(f'B2:B1000')  # Apply to ring column for rows 2-1000
+    ring_validation.add(f'B2:B{MAX_TEMPLATE_ROWS}')  # Apply to ring column for rows 2-1000
     
     # Quadrant column (C) is free text - no validation needed
     
@@ -86,7 +89,7 @@ def create_template():
     status_validation.error = 'Please select a valid status value'
     status_validation.errorTitle = 'Invalid Status'
     ws_data.add_data_validation(status_validation)
-    status_validation.add(f'D2:D1000')  # Apply to status column for rows 2-1000
+    status_validation.add(f'D2:D{MAX_TEMPLATE_ROWS}')  # Apply to status column for rows 2-1000
     
     # Auto-adjust column widths
     for col_num, header in enumerate(headers, 1):

@@ -425,7 +425,6 @@ class RadarAPI:
                 import traceback
                 traceback.print_exc()
                 return jsonify({'error': str(e)}), 500
-                return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/projects', methods=['POST'])
         def create_project():
@@ -554,41 +553,39 @@ class RadarAPI:
                 if 'file' not in request.files:
                     return jsonify({'error': 'No file provided'}), 400
                 
-                file = request.files['file']
+                uploaded_file = request.files['file']
                 
-                if file.filename == '':
+                if uploaded_file.filename == '':
                     return jsonify({'error': 'No file selected'}), 400
                 
                 # Validate file extension
-                if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+                if not (uploaded_file.filename.endswith('.xlsx') or uploaded_file.filename.endswith('.xls')):
                     return jsonify({'error': 'Invalid file type. Please upload an Excel file (.xlsx or .xls)'}), 400
                 
                 # Generate project ID from filename
-                filename = file.filename.rsplit('.', 1)[0]  # Remove extension
+                filename = uploaded_file.filename.rsplit('.', 1)[0]  # Remove extension
                 project_id = re.sub(r'[^a-z0-9_-]+', '_', filename.lower())
                 
                 # Check if project already exists
-                excel_file = self.data_dir / f"{project_id}.xlsx"
-                if excel_file.exists():
+                excel_path = self.data_dir / f"{project_id}.xlsx"
+                if excel_path.exists():
                     return jsonify({'error': f'Project "{filename}" already exists'}), 409
                 
                 # Save the file
-                file.save(str(excel_file))
+                uploaded_file.save(str(excel_path))
                 
-                # Set document properties with original filename
+                # Validate the file can be loaded and set document properties in one operation
                 try:
-                    wb = load_workbook(excel_file)
-                    wb.properties.title = filename
-                    wb.save(excel_file)
-                except Exception as e:
-                    print(f"Warning: Could not set document properties: {e}")
-                
-                # Validate the file can be loaded
-                try:
+                    # First validate by building radar data (this loads the file)
                     radar_data = self._build_radar_for_project(project_id)
+                    
+                    # Then set document properties with original filename
+                    wb = load_workbook(excel_path)
+                    wb.properties.title = filename
+                    wb.save(excel_path)
                 except Exception as e:
                     # Delete the file if validation fails
-                    excel_file.unlink()
+                    excel_path.unlink()
                     return jsonify({'error': f'Invalid Excel file: {str(e)}'}), 400
                 
                 return jsonify({

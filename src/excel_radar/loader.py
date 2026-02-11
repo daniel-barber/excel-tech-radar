@@ -446,14 +446,23 @@ def load_excel(
         quadrant_id = None
         if col_map.quadrant in df.columns and not pd.isna(row[col_map.quadrant]):
             quad_value = str(row[col_map.quadrant]).strip()
-            if quad_value:  # Only validate if not empty
-                quad_slug = slugify(quad_value)
-                if quad_slug not in quadrant_ids:
-                    raise ValueError(
-                        f"Row {idx + 2}: Unknown quadrant '{quad_value}'. "
-                        f"Valid quadrants: {[q.name for q in config.quadrants]}"
-                    )
-                quadrant_id = quadrant_ids[quad_slug]
+            if not quad_value:
+                raise ValueError(
+                    f"Row {idx + 2}: Quadrant is required but empty. "
+                    f"Valid quadrants: {[q.name for q in config.quadrants]}"
+                )
+            quad_slug = slugify(quad_value)
+            if quad_slug not in quadrant_ids:
+                raise ValueError(
+                    f"Row {idx + 2}: Unknown quadrant '{quad_value}'. "
+                    f"Valid quadrants: {[q.name for q in config.quadrants]}"
+                )
+            quadrant_id = quadrant_ids[quad_slug]
+        else:
+            raise ValueError(
+                f"Row {idx + 2}: Quadrant is required but missing. "
+                f"Valid quadrants: {[q.name for q in config.quadrants]}"
+            )
         
         # Note: isNew column is deprecated and ignored for backward compatibility
         # Old Excel files may still have this column, but we now use status field instead

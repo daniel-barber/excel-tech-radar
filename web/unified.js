@@ -1,6 +1,12 @@
 // Unified Interface JavaScript
 // Combines project management, radar visualization, and Excel editing
 
+// ===== Constants =====
+const PROGRESS_UPLOAD_START = 30;
+const PROGRESS_UPLOAD_COMPLETE = 70;
+const PROGRESS_DONE = 100;
+const ERROR_DISPLAY_TIMEOUT = 3000;
+
 // ===== Global State =====
 let currentProject = null;
 let currentProjectId = null;
@@ -1494,7 +1500,7 @@ async function handleFileUpload(file) {
     dropZoneContent.style.display = 'none';
     uploadProgress.style.display = 'block';
     uploadStatus.textContent = 'Uploading...';
-    progressFill.style.width = '30%';
+    progressFill.style.width = `${PROGRESS_UPLOAD_START}%`;
     
     try {
         // Create FormData
@@ -1507,7 +1513,7 @@ async function handleFileUpload(file) {
             body: formData
         });
         
-        progressFill.style.width = '70%';
+        progressFill.style.width = `${PROGRESS_UPLOAD_COMPLETE}%`;
         
         if (!response.ok) {
             const error = await response.json();
@@ -1515,7 +1521,7 @@ async function handleFileUpload(file) {
         }
         
         const result = await response.json();
-        progressFill.style.width = '100%';
+        progressFill.style.width = `${PROGRESS_DONE}%`;
         uploadStatus.textContent = 'Upload successful! Refreshing projects...';
         
         // Wait a moment then refresh projects
@@ -1532,7 +1538,12 @@ async function handleFileUpload(file) {
         
         // Load the new project
         if (result.project_id) {
-            await loadProject(result.project_id);
+            try {
+                await selectProject(result.project_id);
+            } catch (loadError) {
+                console.error('Failed to load project after import:', loadError);
+                alert(`Project imported successfully, but failed to load: ${loadError.message}`);
+            }
         }
         
     } catch (error) {
@@ -1544,7 +1555,7 @@ async function handleFileUpload(file) {
         setTimeout(() => {
             dropZoneContent.style.display = 'flex';
             uploadProgress.style.display = 'none';
-        }, 3000);
+        }, ERROR_DISPLAY_TIMEOUT);
     }
 }
 
