@@ -266,7 +266,7 @@ class RadarAPI:
                 df = pd.read_excel(excel_file, sheet_name=sheet_name)
                 
                 # Ensure all required columns exist
-                required_cols = ['name', 'ring', 'quadrant', 'status', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'tags', 'link', 'linkName']
+                required_cols = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'tags', 'link', 'linkName']
                 for col in required_cols:
                     if col not in df.columns:
                         df[col] = pd.Series(dtype='object')

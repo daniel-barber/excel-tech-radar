@@ -186,9 +186,6 @@ function updateFormDatalists(data) {
     // Update quadrants select
     updateDatalist('edit-quadrant', data.quadrants, data.entries, 'quadrant');
     
-    // Update status select
-    updateStatusDatalist(data);
-    
     // Update deal size select
     updateDealSizeDatalist(data);
     
@@ -293,97 +290,6 @@ function updateDatalist(elementId, configItems, entries, fieldName) {
             option.value = value;
             datalist.appendChild(option);
         });
-    }
-}
-
-function updateStatusDatalist(data) {
-    const select = document.getElementById('edit-status');
-    if (!select) {
-        console.warn('Status select not found');
-        return;
-    }
-    
-    // Helper function to normalize values for comparison (same as updateDatalist)
-    function normalizeForComparison(str) {
-        return str.toLowerCase().replace(/[\s\-_]+/g, '');
-    }
-    
-    // Collect config statuses (if available) and Excel statuses
-    const configStatusSet = new Set();
-    const configStatusMap = new Map(); // normalized -> original
-    let orderedStatuses = [];
-    
-    // Add statuses from config (if available in data.statuses)
-    console.log('Status data check:', {
-        hasData: !!data,
-        hasStatuses: !!(data && data.statuses),
-        isArray: !!(data && data.statuses && Array.isArray(data.statuses)),
-        statusCount: data && data.statuses ? data.statuses.length : 0,
-        statuses: data && data.statuses
-    });
-    
-    if (data && data.statuses && Array.isArray(data.statuses) && data.statuses.length > 0) {
-        console.log('Using config statuses:', data.statuses.map(s => s.name));
-        data.statuses.forEach(status => {
-            if (status.name) {
-                orderedStatuses.push(status.name);
-                const normalized = normalizeForComparison(status.name);
-                configStatusSet.add(normalized);
-                configStatusMap.set(normalized, status.name);
-            }
-        });
-    } else {
-        console.log('No config statuses found, using fallback');
-        // Fallback to standard statuses if no config
-        const standardStatuses = ['New', 'Moved In', 'Moved Out', 'Unchanged'];
-        standardStatuses.forEach(status => {
-            orderedStatuses.push(status);
-            const normalized = normalizeForComparison(status);
-            configStatusSet.add(normalized);
-            configStatusMap.set(normalized, status);
-        });
-    }
-    
-    // Add unique status values from entries that aren't in config
-    const additionalStatuses = new Set();
-    if (data && data.entries) {
-        data.entries.forEach(entry => {
-            if (entry.status && entry.status.trim()) {
-                const trimmed = entry.status.trim();
-                const normalized = normalizeForComparison(trimmed);
-                // Only add if not already in config (normalized comparison)
-                if (!configStatusSet.has(normalized)) {
-                    additionalStatuses.add(trimmed);
-                }
-            }
-        });
-    }
-    
-    // Append additional statuses (sorted)
-    const sortedAdditional = Array.from(additionalStatuses).sort();
-    const allStatuses = [...orderedStatuses, ...sortedAdditional];
-    
-    console.log(`Populating edit-status with ${allStatuses.length} values:`, allStatuses);
-    
-    // Get current value before clearing
-    const currentValue = select.value;
-    
-    // Keep the first "-- Select Status --" option
-    const firstOption = select.options[0];
-    select.innerHTML = '';
-    select.appendChild(firstOption);
-    
-    allStatuses.forEach(status => {
-        const option = document.createElement('option');
-        option.value = status;
-        // Capitalize first letter for display
-        option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        select.appendChild(option);
-    });
-    
-    // Restore previous value if it exists in the new options
-    if (currentValue) {
-        select.value = currentValue;
     }
 }
 
@@ -833,8 +739,7 @@ function renderRadar(data, searchTerm = '') {
             .attr('cy', y)
             .attr('r', dotSize)
             .attr('fill', dotColor)
-            .attr('stroke', entry.status === 'new' ? '#ec4899' : '#333')
-            .attr('stroke-width', entry.status === 'new' ? 3 : 1.5)
+            .attr('stroke', 'none')
             .style('cursor', 'pointer')
             .on('click', (event) => {
                 event.stopPropagation();  // Prevent background click
@@ -902,8 +807,8 @@ async function showDetail(entry) {
             
             d3.select(this)
                 .style('opacity', isSelected ? 1 : 0.2)
-                .attr('stroke-width', isSelected ? 4 : (entry.status === 'new' ? 3 : 1.5))
-                .attr('stroke', isSelected ? '#3b82f6' : (entry.status === 'new' ? '#ec4899' : '#333'));
+                .attr('stroke-width', isSelected ? 4 : 0)
+                .attr('stroke', isSelected ? '#3b82f6' : 'none');
         });
     
     d3.selectAll('.radar-label')
@@ -931,21 +836,6 @@ async function showDetail(entry) {
     document.getElementById('detail-quadrant').textContent = quadrant ? quadrant.name : entry.quadrant;
     document.getElementById('detail-quadrant').style.background = '#64748b';
     document.getElementById('detail-quadrant').style.color = '#ffffff';
-    
-    // Status
-    if (entry.status) {
-        const status = radarData.statuses.find(s => s.id === entry.status);
-        if (status) {
-            document.getElementById('detail-status').textContent = status.name;
-            document.getElementById('detail-status').style.background = status.color;
-        } else {
-            document.getElementById('detail-status').textContent = entry.status;
-            document.getElementById('detail-status').style.background = '#94a3b8';
-        }
-        document.getElementById('detail-status').style.display = 'inline-block';
-    } else {
-        document.getElementById('detail-status').style.display = 'none';
-    }
     
     // Tags - only show if there are actual tags (not empty array or string "[]")
     let hasTags = false;
@@ -1002,12 +892,8 @@ function closeDetail() {
     // Reset all dots to normal opacity and styling
     d3.selectAll('.radar-dot')
         .style('opacity', 1)
-        .attr('stroke', '#333')
-        .attr('stroke-width', function() {
-            // Check if entry is new by looking at stroke-width
-            const currentWidth = parseFloat(d3.select(this).attr('stroke-width'));
-            return currentWidth > 2 ? 3 : 1.5;
-        });
+        .attr('stroke', 'none')
+        .attr('stroke-width', 0);
     
     d3.selectAll('.radar-label')
         .style('opacity', 1);
@@ -1075,11 +961,6 @@ function showEditEntryForm() {
     
     // Set quadrant
     document.getElementById('edit-quadrant').value = currentDetailEntry.quadrant;
-    
-    // Set status - find matching display name for the slug
-    const statusSelect = document.getElementById('edit-status');
-    const matchingStatus = findMatchingOption(statusSelect, currentDetailEntry.status);
-    statusSelect.value = matchingStatus;
     
     // Set deal size - check if entry has dealSize field directly, otherwise map from value
     const dealSizeSelect = document.getElementById('edit-dealsize');
@@ -1187,7 +1068,6 @@ function showNewEntryForm() {
     document.getElementById('edit-name').value = '';
     document.getElementById('edit-ring').value = '';
     document.getElementById('edit-quadrant').value = '';
-    document.getElementById('edit-status').value = '';
     document.getElementById('edit-dealsize').value = '';
     document.getElementById('edit-propensity').value = '';
     document.getElementById('edit-strategic').checked = false;
@@ -1281,7 +1161,6 @@ async function saveEditEntry(event) {
         name: document.getElementById('edit-name').value,
         ring: document.getElementById('edit-ring').value,
         quadrant: document.getElementById('edit-quadrant').value,
-        status: document.getElementById('edit-status').value || null,
         dealSize: dealSizeValue || null,
         propensityToWin: propensityValue || null,
         isStrategic: isStrategic,

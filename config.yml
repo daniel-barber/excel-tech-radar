@@ -28,7 +28,7 @@ rings:
     description: "Quarter 4"
 
   - id: beyond
-    name: "Beyond This Year"
+    name: "Beyond"
     order: 4
     color: "#000000"  # Black
     description: "Future opportunities beyond this year"
