@@ -35,6 +35,10 @@ ENV/
 *~
 .DS_Store
 
+# Development scripts (kept in dev/ directory)
+# Uncomment to ignore dev directory entirely:
+# dev/
+
 # Testing
 .pytest_cache/
 .coverage
@@ -57,10 +61,12 @@ dist/
 # Backup and deleted files
 *.bak
 *.bak.*
+*.backup
 *.deleted
 data/*.bak
 data/*.bak.*
 data/*.deleted
+web/*.backup
 
 # Local config overrides (optional)
 config.local.yml

@@ -110,7 +110,10 @@ excel-tech-radar/
 ├── data/              # Excel files (one per project)
 ├── config.yml         # Global configuration
 ├── src/excel_radar/   # Python backend
-└── web/               # Web interface files
+├── web/               # Web interface files
+├── templates/         # Excel templates
+├── tests/             # Unit tests
+└── dev/               # Development scripts
 ```
 
 ## Use Cases
