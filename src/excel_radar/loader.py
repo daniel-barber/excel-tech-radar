@@ -620,4 +620,3 @@ def validate_entries(entries: List[Dict[str, Any]]) -> List[RadarEntry]:
     
     return validated
 
-# Made with Bob

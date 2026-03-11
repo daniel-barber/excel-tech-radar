@@ -54,5 +54,13 @@ dist/
 ~$*.xlsx
 ~$*.xls
 
+# Backup and deleted files
+*.bak
+*.bak.*
+*.deleted
+data/*.bak
+data/*.bak.*
+data/*.deleted
+
 # Local config overrides (optional)
 config.local.yml

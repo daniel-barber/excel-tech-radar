@@ -176,4 +176,3 @@ class TestEntryValidation:
         
         assert entry.tags == []
 
-# Made with Bob

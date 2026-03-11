@@ -266,4 +266,3 @@ print(f"   - Rings: {df['ring'].unique().tolist()}")
 print(f"   - Quadrants: {df['quadrant'].unique().tolist()}")
 print(f"   - Statuses: {df['status'].unique().tolist()}")
 
-# Made with Bob

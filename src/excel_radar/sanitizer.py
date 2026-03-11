@@ -167,4 +167,3 @@ def sanitize_description(description: Optional[str]) -> str:
     
     return sanitize_html(str(description))
 
-# Made with Bob

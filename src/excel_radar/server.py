@@ -61,4 +61,3 @@ def serve_directory(
     finally:
         os.chdir(original_dir)
 
-# Made with Bob

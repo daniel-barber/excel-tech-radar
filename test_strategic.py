@@ -47,4 +47,3 @@ if entries:
 
 print("\nDone!")
 
-# Made with Bob

@@ -145,4 +145,3 @@ columnMappings:
   dealSize: "dealSize"      # optional (deal size category)
   propensityToWin: "propensityToWin"  # optional (propensity to win - controls dot color)
 
-# Made with Bob

@@ -20,16 +20,56 @@ from .builder import build_radar_json
 class RadarAPI:
     """Flask API for radar management."""
     
-    def __init__(self, data_dir: str = "data", dist_dir: str = "dist"):
+    def __init__(self, data_dir: str = "data", dist_dir: str = "dist", max_backups: int = 5):
         self.app = Flask(__name__)
         CORS(self.app)  # Enable CORS for frontend
         
         self.data_dir = Path(data_dir)
         self.dist_dir = Path(dist_dir)
+        self.max_backups = max_backups  # Maximum number of backups to keep per project
         self.data_dir.mkdir(exist_ok=True)
         self.dist_dir.mkdir(exist_ok=True)
         
         self._register_routes()
+    
+    def _cleanup_old_backups(self, project_id: str):
+        """
+        Keep only the N most recent backup files for a project.
+        Removes .bak files older than the max_backups limit.
+        """
+        try:
+            # Find all backup files for this project
+            backup_pattern = f"{project_id}.xlsx.bak*"
+            backup_files = list(self.data_dir.glob(backup_pattern))
+            
+            if len(backup_files) <= self.max_backups:
+                return  # Nothing to clean up
+            
+            # Sort by modification time (newest first)
+            backup_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            
+            # Remove old backups beyond the limit
+            for old_backup in backup_files[self.max_backups:]:
+                old_backup.unlink()
+                print(f"Cleaned up old backup: {old_backup.name}")
+        except Exception as e:
+            print(f"Error cleaning up backups for {project_id}: {e}")
+    
+    def _cleanup_deleted_files(self, retention_days: int = 30):
+        """
+        Remove .deleted files older than retention_days.
+        """
+        try:
+            from datetime import datetime, timedelta
+            cutoff_time = datetime.now().timestamp() - (retention_days * 24 * 60 * 60)
+            
+            deleted_files = list(self.data_dir.glob("*.deleted"))
+            for deleted_file in deleted_files:
+                if deleted_file.stat().st_mtime < cutoff_time:
+                    deleted_file.unlink()
+                    print(f"Cleaned up old deleted file: {deleted_file.name}")
+        except Exception as e:
+            print(f"Error cleaning up deleted files: {e}")
     
     def _build_radar_for_project(self, project_id: str) -> Dict[str, Any]:
         """Helper to build radar JSON for a project."""
@@ -222,9 +262,13 @@ class RadarAPI:
                 # Create DataFrame from rows
                 df = pd.DataFrame(rows)
                 
-                # Backup original file
-                backup_file = excel_file.with_suffix('.xlsx.bak')
+                # Backup original file with timestamp
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                backup_file = excel_file.with_suffix(f'.xlsx.bak.{timestamp}')
                 shutil.copy2(excel_file, backup_file)
+                
+                # Cleanup old backups
+                self._cleanup_old_backups(project_id)
                 
                 # Write to Excel
                 df.to_excel(excel_file, sheet_name=sheet_name, index=False)
@@ -409,9 +453,13 @@ class RadarAPI:
                             print(f"Error setting {key}={value} (type: {type(value)}, dtype: {df[key].dtype}): {e}")
                             raise ValueError(f"Invalid value '{value}' for dtype '{df[key].dtype}'")
                 
-                # Backup original file
-                backup_file = excel_file.with_suffix('.xlsx.bak')
+                # Backup original file with timestamp
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                backup_file = excel_file.with_suffix(f'.xlsx.bak.{timestamp}')
                 shutil.copy2(excel_file, backup_file)
+                
+                # Cleanup old backups
+                self._cleanup_old_backups(project_id)
                 
                 # Write back
                 df.to_excel(excel_file, sheet_name=sheet_name, index=False)
@@ -489,6 +537,32 @@ class RadarAPI:
                 return jsonify({'success': True, 'message': 'Project deleted'})
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
+        @self.app.route('/api/maintenance/cleanup', methods=['POST'])
+        def cleanup_maintenance():
+            """Manual cleanup of old backups and deleted files."""
+            try:
+                data = request.get_json() or {}
+                retention_days = data.get('retention_days', 30)
+                
+                # Cleanup deleted files
+                self._cleanup_deleted_files(retention_days)
+                
+                # Cleanup backups for all projects
+                cleanup_count = 0
+                for excel_file in self.data_dir.glob("*.xlsx"):
+                    if not excel_file.name.endswith('.deleted'):
+                        project_id = excel_file.stem
+                        self._cleanup_old_backups(project_id)
+                        cleanup_count += 1
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Cleanup completed for {cleanup_count} projects',
+                    'retention_days': retention_days
+                })
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
         
         @self.app.route('/api/projects/<project_id>/download', methods=['GET'])
         def download_project(project_id: str):

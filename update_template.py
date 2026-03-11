@@ -102,4 +102,3 @@ def update_template():
 if __name__ == "__main__":
     update_template()
 
-# Made with Bob

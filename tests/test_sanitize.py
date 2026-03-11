@@ -121,4 +121,3 @@ class TestSanitizeDescription:
         assert "<script>" not in result
         assert "<p>Hello</p>" in result
 
-# Made with Bob

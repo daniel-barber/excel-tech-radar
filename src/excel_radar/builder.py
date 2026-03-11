@@ -199,4 +199,3 @@ def build_thoughtworks_json(
     
     return tw_data
 
-# Made with Bob
