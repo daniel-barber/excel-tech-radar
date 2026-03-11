@@ -16,6 +16,7 @@ from openpyxl import Workbook, load_workbook
 from .loader import auto_discover_config, load_excel, validate_entries
 from .builder import build_radar_json
 from .config import Config
+from .logging_config import setup_logging, get_logger
 
 
 class RadarAPI:
@@ -35,12 +36,22 @@ class RadarAPI:
         self.config = config
         self.app = Flask(__name__)
         
+        # Set up logging
+        self.logger = setup_logging(
+            level=config.log_level,
+            log_file=config.log_file if config.log_file else None,
+            log_format=config.log_format,
+        )
+        self.logger.info("Initializing Radar API")
+        
         # Configure CORS
         cors_origins = config.allowed_origins
         if cors_origins == '*':
             CORS(self.app)
+            self.logger.warning("CORS enabled for all origins - not recommended for production")
         else:
             CORS(self.app, origins=cors_origins.split(','))
+            self.logger.info(f"CORS enabled for origins: {cors_origins}")
         
         # Set up directories
         self.data_dir = config.data_dir
@@ -48,8 +59,14 @@ class RadarAPI:
         self.max_backups = config.max_backups
         self.data_dir.mkdir(exist_ok=True)
         self.dist_dir.mkdir(exist_ok=True)
+        self.logger.info(f"Data directory: {self.data_dir.absolute()}")
+        self.logger.info(f"Dist directory: {self.dist_dir.absolute()}")
+        
+        # Register error handlers
+        self._register_error_handlers()
         
         self._register_routes()
+        self.logger.info("Radar API initialized successfully")
     
     def _cleanup_old_backups(self, project_id: str):
         """
@@ -70,9 +87,9 @@ class RadarAPI:
             # Remove old backups beyond the limit
             for old_backup in backup_files[self.max_backups:]:
                 old_backup.unlink()
-                print(f"Cleaned up old backup: {old_backup.name}")
+                self.logger.info(f"Cleaned up old backup: {old_backup.name}", extra={'project_id': project_id})
         except Exception as e:
-            print(f"Error cleaning up backups for {project_id}: {e}")
+            self.logger.error(f"Error cleaning up backups for {project_id}: {e}", exc_info=True, extra={'project_id': project_id})
     
     def _cleanup_deleted_files(self, retention_days: int = 30):
         """
@@ -83,12 +100,17 @@ class RadarAPI:
             cutoff_time = datetime.now().timestamp() - (retention_days * 24 * 60 * 60)
             
             deleted_files = list(self.data_dir.glob("*.deleted"))
+            cleaned_count = 0
             for deleted_file in deleted_files:
                 if deleted_file.stat().st_mtime < cutoff_time:
                     deleted_file.unlink()
-                    print(f"Cleaned up old deleted file: {deleted_file.name}")
+                    cleaned_count += 1
+                    self.logger.debug(f"Cleaned up old deleted file: {deleted_file.name}")
+            
+            if cleaned_count > 0:
+                self.logger.info(f"Cleaned up {cleaned_count} old deleted files")
         except Exception as e:
-            print(f"Error cleaning up deleted files: {e}")
+            self.logger.error(f"Error cleaning up deleted files: {e}", exc_info=True)
     
     def _build_radar_for_project(self, project_id: str) -> Dict[str, Any]:
         """Helper to build radar JSON for a project."""
@@ -117,9 +139,118 @@ class RadarAPI:
         radar_data = build_radar_json(config, entries, temp_json)
         
         return radar_data
+    def _register_error_handlers(self):
+        """Register error handlers for common HTTP errors."""
+        
+        @self.app.errorhandler(404)
+        def not_found(error):
+            """Handle 404 errors."""
+            self.logger.warning(f"404 Not Found: {request.url}")
+            return jsonify({
+                'error': 'Resource not found',
+                'status': 404,
+                'path': request.path
+            }), 404
+        
+        @self.app.errorhandler(500)
+        def internal_error(error):
+            """Handle 500 errors."""
+            self.logger.error(f"500 Internal Server Error: {str(error)}", exc_info=True)
+            return jsonify({
+                'error': 'Internal server error',
+                'status': 500,
+                'message': str(error) if self.config.debug else 'An unexpected error occurred'
+            }), 500
+        
+        @self.app.errorhandler(400)
+        def bad_request(error):
+            """Handle 400 errors."""
+            self.logger.warning(f"400 Bad Request: {str(error)}")
+            return jsonify({
+                'error': 'Bad request',
+                'status': 400,
+                'message': str(error)
+            }), 400
+        
+        @self.app.errorhandler(Exception)
+        def handle_exception(error):
+            """Handle uncaught exceptions."""
+            self.logger.error(f"Uncaught exception: {str(error)}", exc_info=True)
+            
+            # Return JSON instead of HTML for HTTP errors
+            if hasattr(error, 'code'):
+                return jsonify({
+                    'error': error.name if hasattr(error, 'name') else 'Error',
+                    'status': error.code,
+                    'message': str(error)
+                }), error.code
+            
+            # Return 500 for other exceptions
+            return jsonify({
+                'error': 'Internal server error',
+                'status': 500,
+                'message': str(error) if self.config.debug else 'An unexpected error occurred'
+            }), 500
+    
     
     def _register_routes(self):
         """Register all API routes."""
+        @self.app.route('/api/health', methods=['GET'])
+        def health_check():
+            """Health check endpoint for monitoring."""
+            try:
+                import psutil
+                import time
+                
+                # Get system info
+                disk_usage = psutil.disk_usage(str(self.data_dir))
+                memory = psutil.virtual_memory()
+                
+                # Count projects
+                project_count = len(list(self.data_dir.glob("*.xlsx")))
+                
+                health_data = {
+                    'status': 'healthy',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                    'version': '1.0.0',
+                    'uptime_seconds': int(time.time() - self.app.config.get('START_TIME', time.time())),
+                    'projects_count': project_count,
+                    'disk': {
+                        'total_gb': round(disk_usage.total / (1024**3), 2),
+                        'used_gb': round(disk_usage.used / (1024**3), 2),
+                        'free_gb': round(disk_usage.free / (1024**3), 2),
+                        'percent_used': disk_usage.percent,
+                    },
+                    'memory': {
+                        'total_gb': round(memory.total / (1024**3), 2),
+                        'available_gb': round(memory.available / (1024**3), 2),
+                        'percent_used': memory.percent,
+                    },
+                    'config': {
+                        'data_dir': str(self.data_dir),
+                        'max_backups': self.max_backups,
+                        'debug': self.config.debug,
+                    }
+                }
+                
+                self.logger.debug("Health check requested")
+                return jsonify(health_data)
+            except ImportError:
+                # psutil not installed, return basic health
+                project_count = len(list(self.data_dir.glob("*.xlsx")))
+                return jsonify({
+                    'status': 'healthy',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                    'projects_count': project_count,
+                    'message': 'Install psutil for detailed system metrics'
+                })
+            except Exception as e:
+                self.logger.error(f"Health check failed: {e}", exc_info=True)
+                return jsonify({
+                    'status': 'unhealthy',
+                    'error': str(e)
+                }), 500
+        
         
         @self.app.route('/api/projects', methods=['GET'])
         def list_projects():

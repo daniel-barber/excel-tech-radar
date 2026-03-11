@@ -45,6 +45,7 @@ dev = [
 prod = [
     "python-dotenv>=1.0.0",
     "gunicorn>=21.0.0",
+    "psutil>=5.9.0",
 ]
 
 [project.scripts]
