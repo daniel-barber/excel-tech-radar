@@ -841,6 +841,17 @@ function renderRadar(data, searchTerm = '') {
                 showDetail(entry);
             });
         
+        // Add strategic indicator (dark blue center dot)
+        if (entry.isStrategic) {
+            g.append('circle')
+                .attr('class', 'radar-dot-strategic')
+                .attr('cx', x)
+                .attr('cy', y)
+                .attr('r', dotSize * 0.35)  // 35% of main dot size
+                .attr('fill', '#1565C0')  // Dark blue
+                .style('pointer-events', 'none');  // Don't interfere with click events
+        }
+        
         g.append('text')
             .attr('class', 'radar-label')
             .attr('data-entry-id', entry.id)
@@ -1113,6 +1124,10 @@ function showEditEntryForm() {
         }
     }
     document.getElementById('edit-tags').value = tagsValue;
+    
+    // Set strategic checkbox
+    const strategicCheckbox = document.getElementById('edit-strategic');
+    strategicCheckbox.checked = currentDetailEntry.isStrategic === true;
     document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
     
@@ -1175,6 +1190,7 @@ function showNewEntryForm() {
     document.getElementById('edit-status').value = '';
     document.getElementById('edit-dealsize').value = '';
     document.getElementById('edit-propensity').value = '';
+    document.getElementById('edit-strategic').checked = false;
     document.getElementById('edit-tags').value = '';
     document.getElementById('edit-link-name').value = '';
     document.getElementById('edit-link').value = '';
@@ -1259,6 +1275,7 @@ async function saveEditEntry(event) {
     // Get form data
     const dealSizeValue = document.getElementById('edit-dealsize').value;
     const propensityValue = document.getElementById('edit-propensity').value;
+    const isStrategic = document.getElementById('edit-strategic').checked;
     
     const entryData = {
         name: document.getElementById('edit-name').value,
@@ -1267,6 +1284,7 @@ async function saveEditEntry(event) {
         status: document.getElementById('edit-status').value || null,
         dealSize: dealSizeValue || null,
         propensityToWin: propensityValue || null,
+        isStrategic: isStrategic,
         tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
         description: descriptionHtml,
         linkName: document.getElementById('edit-link-name').value || null,

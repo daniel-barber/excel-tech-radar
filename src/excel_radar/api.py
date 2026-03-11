@@ -266,7 +266,7 @@ class RadarAPI:
                 df = pd.read_excel(excel_file, sheet_name=sheet_name)
                 
                 # Ensure all required columns exist
-                required_cols = ['name', 'ring', 'quadrant', 'status', 'dealSize', 'propensityToWin', 'description', 'tags', 'link', 'linkName']
+                required_cols = ['name', 'ring', 'quadrant', 'status', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'tags', 'link', 'linkName']
                 for col in required_cols:
                     if col not in df.columns:
                         df[col] = pd.Series(dtype='object')
@@ -374,11 +374,14 @@ class RadarAPI:
                     if key in df.columns and pd.api.types.is_numeric_dtype(df[key]):
                         df[key] = df[key].astype('object')
                 
-                # Also check incoming data for string values going to numeric columns
+                # Also check incoming data for string values or booleans going to numeric columns
                 for key, value in row_data.items():
                     if key in df.columns:
                         # If trying to set a string value (including empty string) to a numeric column, convert column to object first
                         if isinstance(value, str) and pd.api.types.is_numeric_dtype(df[key]):
+                            df[key] = df[key].astype('object')
+                        # If trying to set a boolean to a numeric column, convert column to object first
+                        elif isinstance(value, bool) and pd.api.types.is_numeric_dtype(df[key]):
                             df[key] = df[key].astype('object')
                 
                 # Second pass: set values
@@ -388,7 +391,7 @@ class RadarAPI:
                         if key == 'tags' and isinstance(value, list):
                             value = ', '.join(value) if value else ''
                         # Convert boolean to proper format
-                        elif key == 'isNew' and isinstance(value, bool):
+                        elif key in ['isNew', 'isStrategic'] and isinstance(value, bool):
                             value = value
                         # Handle None/null/empty values based on column dtype
                         elif value is None or value == '':

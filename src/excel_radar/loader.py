@@ -116,6 +116,7 @@ class RadarEntry(BaseModel):
     owner: Optional[str] = None
     dealSize: Optional[str] = None
     propensityToWin: Optional[str] = None
+    isStrategic: bool = False
 
     @field_validator("name")
     @classmethod
@@ -559,6 +560,18 @@ def load_excel(
             if propensity_str:
                 propensityToWin = propensity_str
         
+        # Get isStrategic flag
+        isStrategic = False
+        if 'isStrategic' in df.columns and not pd.isna(row['isStrategic']):
+            strategic_val = row['isStrategic']
+            # Handle boolean values directly
+            if isinstance(strategic_val, bool):
+                isStrategic = strategic_val
+            else:
+                # Handle string representations
+                strategic_str = str(strategic_val).strip().lower()
+                isStrategic = strategic_str in ['true', 'yes', '1', 'x']
+        
         # Create entry dict
         entry = {
             "id": slugify(name),
@@ -575,6 +588,7 @@ def load_excel(
             "owner": owner,
             "dealSize": dealSize,
             "propensityToWin": propensityToWin,
+            "isStrategic": isStrategic,
         }
         
         entries.append(entry)
