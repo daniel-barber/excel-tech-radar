@@ -766,6 +766,7 @@ function renderRadar(data, searchTerm = '') {
         if (entry.isStrategic) {
             g.append('circle')
                 .attr('class', 'radar-dot-strategic')
+                .attr('data-entry-name', entry.name)  // Link to parent entry
                 .attr('cx', x)
                 .attr('cy', y)
                 .attr('r', dotSize * 0.35)  // 35% of main dot size
@@ -827,6 +828,16 @@ async function showDetail(entry) {
                 .attr('stroke', isSelected ? '#3b82f6' : 'none');
         });
     
+    // Also fade strategic center dots
+    d3.selectAll('.radar-dot-strategic')
+        .each(function() {
+            const entryName = d3.select(this).attr('data-entry-name');
+            const isSelected = entryName === entry.name;
+            
+            d3.select(this)
+                .style('opacity', isSelected ? 1 : 0.2);
+        });
+    
     d3.selectAll('.radar-label')
         .each(function() {
             const labelId = d3.select(this).attr('data-entry-id');
@@ -847,11 +858,56 @@ async function showDetail(entry) {
     const quadrant = radarData.quadrants.find(q => q.id === entry.quadrant);
     
     document.getElementById('detail-ring').textContent = ring ? ring.name : entry.ring;
-    document.getElementById('detail-ring').style.background = ring ? ring.color : '#94a3b8';
+    document.getElementById('detail-ring').style.background = '#64748b';
+    document.getElementById('detail-ring').style.color = '#ffffff';
     
     document.getElementById('detail-quadrant').textContent = quadrant ? quadrant.name : entry.quadrant;
     document.getElementById('detail-quadrant').style.background = '#64748b';
     document.getElementById('detail-quadrant').style.color = '#ffffff';
+    
+    // Deal Size
+    if (entry.dealSize) {
+        const dealSizeConfig = radarData.dealSizes?.find(ds => ds.name === entry.dealSize);
+        document.getElementById('detail-dealsize').textContent = `${entry.dealSize}`;
+        document.getElementById('detail-dealsize').style.background = '#64748b';
+        document.getElementById('detail-dealsize').style.color = '#ffffff';
+        document.getElementById('detail-dealsize').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-dealsize').style.display = 'none';
+    }
+    
+    // Propensity to Win
+    if (entry.propensityToWin) {
+        const propensityConfig = radarData.propensityToWin?.find(p => p.name === entry.propensityToWin);
+        const propensityColor = propensityConfig?.color || '#2196F3';
+        
+        // Use emoji indicators for propensity
+        let propensityEmoji = '📊';
+        if (entry.propensityToWin.toLowerCase().includes('high')) {
+            propensityEmoji = '🎯';
+        } else if (entry.propensityToWin.toLowerCase().includes('medium')) {
+            propensityEmoji = '📈';
+        } else if (entry.propensityToWin.toLowerCase().includes('low')) {
+            propensityEmoji = '📉';
+        }
+        
+        document.getElementById('detail-propensity').textContent = `${propensityEmoji} ${entry.propensityToWin}`;
+        document.getElementById('detail-propensity').style.background = propensityColor;
+        document.getElementById('detail-propensity').style.color = '#ffffff';
+        document.getElementById('detail-propensity').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-propensity').style.display = 'none';
+    }
+    
+    // Strategic
+    if (entry.isStrategic === true || entry.isStrategic === 'true' || entry.isStrategic === 'TRUE') {
+        document.getElementById('detail-strategic').textContent = '⭐ Strategic';
+        document.getElementById('detail-strategic').style.background = '#1565C0'; // Dark blue
+        document.getElementById('detail-strategic').style.color = '#ffffff';
+        document.getElementById('detail-strategic').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-strategic').style.display = 'none';
+    }
     
     // Tags - only show if there are actual tags (not empty array or string "[]")
     let hasTags = false;
@@ -910,6 +966,10 @@ function closeDetail() {
         .style('opacity', 1)
         .attr('stroke', 'none')
         .attr('stroke-width', 0);
+    
+    // Reset strategic center dots
+    d3.selectAll('.radar-dot-strategic')
+        .style('opacity', 1);
     
     d3.selectAll('.radar-label')
         .style('opacity', 1);
