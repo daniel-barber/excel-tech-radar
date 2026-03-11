@@ -1,0 +1,58 @@
+# Production Configuration Example for Excel Tech Radar
+# Copy and customize this file for your production environment
+
+# Server settings
+server:
+  host: 0.0.0.0  # Bind to all interfaces
+  port: 8080
+  debug: false
+
+# Data directories
+data:
+  data_dir: /var/lib/radar/data
+  dist_dir: /var/lib/radar/dist
+
+# Backup settings
+backup:
+  enabled: true
+  max_backups: 10  # Keep more backups in production
+  retention_days: 90  # Keep deleted files for 90 days
+  auto_cleanup: true
+
+# Logging configuration
+logging:
+  level: INFO
+  file: /var/log/radar/app.log
+  format: json  # JSON format for log aggregation
+  max_size_mb: 100
+  backup_count: 5
+
+# Security
+security:
+  secret_key: ${RADAR_SECRET_KEY}  # Load from environment
+  allowed_origins:
+    - https://radar.example.com
+    - https://radar-staging.example.com
+  enable_cors: true
+  max_upload_size_mb: 50
+
+# Features
+features:
+  export: true
+  import: true
+  delete: true
+  maintenance_api: true
+
+# Performance
+performance:
+  request_timeout: 60
+  max_workers: 4
+  enable_compression: true
+
+# Monitoring (optional)
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  health_check_path: /health
+
+# Made with Bob

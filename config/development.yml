@@ -1,0 +1,56 @@
+# Development Configuration Example for Excel Tech Radar
+# Use this for local development
+
+# Server settings
+server:
+  host: 127.0.0.1  # Localhost only
+  port: 8080
+  debug: true  # Enable debug mode
+
+# Data directories (relative paths for development)
+data:
+  data_dir: ./data
+  dist_dir: ./dist
+
+# Backup settings
+backup:
+  enabled: true
+  max_backups: 3  # Fewer backups in development
+  retention_days: 7  # Shorter retention
+  auto_cleanup: true
+
+# Logging configuration
+logging:
+  level: DEBUG  # Verbose logging for development
+  file: ./logs/dev.log
+  format: text  # Human-readable format
+  max_size_mb: 10
+  backup_count: 2
+
+# Security (relaxed for development)
+security:
+  secret_key: dev-secret-key-not-for-production
+  allowed_origins: "*"  # Allow all origins
+  enable_cors: true
+  max_upload_size_mb: 10
+
+# Features (all enabled for testing)
+features:
+  export: true
+  import: true
+  delete: true
+  maintenance_api: true
+
+# Performance
+performance:
+  request_timeout: 30
+  max_workers: 2
+  enable_compression: false  # Disable for easier debugging
+
+# Development tools
+development:
+  auto_reload: true
+  show_sql: false
+  profile_requests: false
+
+# Made with Bob

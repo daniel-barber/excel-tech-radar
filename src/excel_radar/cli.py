@@ -427,15 +427,31 @@ def serve(
     """
     try:
         from excel_radar.api import RadarAPI
+        from excel_radar.config import Config
+        
+        # Create config from CLI arguments and environment
+        config = Config()
+        # Override with CLI arguments if provided
+        if data_dir != Path("data"):
+            config.data_dir = data_dir
+        if dist_dir != Path("dist"):
+            config.dist_dir = dist_dir
+        if host != "127.0.0.1":
+            config.host = host
+        if port != 8080:
+            config.port = port
+        config.debug = debug
         
         console.print("🚀 Starting unified interface server...", style="bold blue")
-        console.print(f"📁 Data directory: {data_dir.absolute()}")
-        console.print(f"📦 Dist directory: {dist_dir.absolute()}")
-        console.print(f"🌐 Server: http://{host}:{port}")
+        console.print(f"📁 Data directory: {config.data_dir.absolute()}")
+        console.print(f"📦 Dist directory: {config.dist_dir.absolute()}")
+        console.print(f"🌐 Server: http://{config.host}:{config.port}")
+        if config.debug:
+            console.print("⚠️  Debug mode enabled", style="yellow")
         console.print("\n💡 Press Ctrl+C to stop the server\n")
         
-        api = RadarAPI(data_dir=str(data_dir), dist_dir=str(dist_dir))
-        api.run(host=host, port=port, debug=debug)
+        api = RadarAPI(config=config)
+        api.run(host=config.host, port=config.port, debug=config.debug)
         
     except ImportError:
         console.print(

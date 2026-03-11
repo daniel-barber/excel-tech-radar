@@ -91,6 +91,29 @@ dealSizes:
     description: "Large deals over $500k"
 ```
 
+## Environment Configuration
+
+For production deployments, use environment variables to configure the application:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your settings
+nano .env
+```
+
+Key environment variables:
+- `RADAR_HOST` - Server host (default: 127.0.0.1)
+- `RADAR_PORT` - Server port (default: 8080)
+- `RADAR_DEBUG` - Debug mode (default: false)
+- `RADAR_DATA_DIR` - Data directory path
+- `RADAR_MAX_BACKUPS` - Number of backups to keep (default: 5)
+- `RADAR_LOG_LEVEL` - Logging level (INFO, DEBUG, WARNING, ERROR)
+
+See `.env.example` for all available options and `config/README.md` for detailed configuration guide.
+
+
 ## Advanced Usage
 
 Most users only need `excel-radar serve`. Additional commands for special cases:

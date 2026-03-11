@@ -68,5 +68,10 @@ data/*.bak.*
 data/*.deleted
 web/*.backup
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Local config overrides (optional)
 config.local.yml

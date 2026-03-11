@@ -15,18 +15,37 @@ from openpyxl import Workbook, load_workbook
 
 from .loader import auto_discover_config, load_excel, validate_entries
 from .builder import build_radar_json
+from .config import Config
 
 
 class RadarAPI:
     """Flask API for radar management."""
     
-    def __init__(self, data_dir: str = "data", dist_dir: str = "dist", max_backups: int = 5):
-        self.app = Flask(__name__)
-        CORS(self.app)  # Enable CORS for frontend
+    def __init__(self, config: Optional[Config] = None):
+        """
+        Initialize the Radar API.
         
-        self.data_dir = Path(data_dir)
-        self.dist_dir = Path(dist_dir)
-        self.max_backups = max_backups  # Maximum number of backups to keep per project
+        Args:
+            config: Configuration object. If None, loads from environment.
+        """
+        if config is None:
+            from .config import load_config
+            config = load_config()
+        
+        self.config = config
+        self.app = Flask(__name__)
+        
+        # Configure CORS
+        cors_origins = config.allowed_origins
+        if cors_origins == '*':
+            CORS(self.app)
+        else:
+            CORS(self.app, origins=cors_origins.split(','))
+        
+        # Set up directories
+        self.data_dir = config.data_dir
+        self.dist_dir = config.dist_dir
+        self.max_backups = config.max_backups
         self.data_dir.mkdir(exist_ok=True)
         self.dist_dir.mkdir(exist_ok=True)
         
