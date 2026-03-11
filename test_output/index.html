@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technology Radar</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <h1 id="radar-title">Technology Radar</h1>
+            <p id="radar-subtitle">Loading...</p>
+        </header>
+
+        <!-- Search -->
+        <div id="controls">
+            <div id="search-container">
+                <input
+                    type="text"
+                    id="search-box"
+                    placeholder="Search entries..."
+                    aria-label="Search entries"
+                />
+                <button id="clear-search" aria-label="Clear search">✕</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <!-- Radar Visualization -->
+            <div id="radar-container">
+                <svg id="radar-svg" role="img" aria-label="Technology Radar Visualization">
+                    <g id="radar-group"></g>
+                </svg>
+                
+                <!-- Zoom Controls -->
+                <div id="zoom-controls">
+                    <button id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button id="zoom-reset" aria-label="Reset zoom" title="Reset zoom (or double-click)">⊙</button>
+                    <button id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+                    <button id="export-png" aria-label="Export to PNG" title="Export radar as PNG image">📷</button>
+                </div>
+                
+                <!-- Legend -->
+                <div id="legend">
+                    <h3>Legend</h3>
+                    <div id="legend-rings"></div>
+                    <div id="legend-statuses"></div>
+                    <div id="legend-dealsizes"></div>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <aside id="detail-panel" class="hidden" role="complementary">
+                <button id="close-panel" aria-label="Close detail panel">✕</button>
+                <div id="detail-content">
+                    <h2 id="detail-name"></h2>
+                    <div id="detail-meta">
+                        <span id="detail-ring" class="badge"></span>
+                        <span id="detail-quadrant" class="badge"></span>
+                        <span id="detail-status" class="badge"></span>
+                    </div>
+                    <div id="detail-tags"></div>
+                    <div id="detail-description"></div>
+                    <div id="detail-extra"></div>
+                    <div id="detail-link"></div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Tooltip -->
+        <div id="tooltip" class="hidden" role="tooltip"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Loading radar data...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden">
+            <h2>Error Loading Radar</h2>
+            <p id="error-message"></p>
+        </div>
+    </div>
+
+    <!-- Load the radar app -->
+    <script src="app.js"></script>
+
+<script type="application/json" id="radar-data">
+{
+  "meta": {
+    "title": "Sales & Opportunity Strategy Radar",
+    "subtitle": "Q1 2026",
+    "generatedAt": "2026-03-11T08:11:53.779690Z"
+  },
+  "rings": [
+    {
+      "id": "q1",
+      "name": "Q1",
+      "order": 0,
+      "color": "#4CAF50",
+      "description": "Quarter 1"
+    },
+    {
+      "id": "q2",
+      "name": "Q2",
+      "order": 1,
+      "color": "#2196F3",
+      "description": "Quarter 2"
+    },
+    {
+      "id": "q3",
+      "name": "Q3",
+      "order": 2,
+      "color": "#FF9800",
+      "description": "Quarter 3"
+    },
+    {
+      "id": "q4",
+      "name": "Q4",
+      "order": 3,
+      "color": "#9E9E9E",
+      "description": "Quarter 4"
+    },
+    {
+      "id": "beyond",
+      "name": "Beyond This Year",
+      "order": 4,
+      "color": "#000000",
+      "description": "Future opportunities beyond this year"
+    }
+  ],
+  "quadrants": [
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "description": "Infrastructure and platform solutions"
+    },
+    {
+      "id": "applications",
+      "name": "Applications",
+      "description": "Application and software solutions"
+    },
+    {
+      "id": "services",
+      "name": "Services",
+      "description": "Professional and managed services"
+    },
+    {
+      "id": "emerging",
+      "name": "Emerging Tech",
+      "description": "Emerging technologies and innovations"
+    }
+  ],
+  "statuses": [
+    {
+      "id": "on-track",
+      "name": "On Track",
+      "color": "#4CAF50",
+      "description": "Progressing as planned"
+    },
+    {
+      "id": "at-risk",
+      "name": "At Risk",
+      "color": "#FFC107",
+      "description": "Needs attention"
+    },
+    {
+      "id": "blocked",
+      "name": "Blocked",
+      "color": "#F44336",
+      "description": "Critical issues"
+    },
+    {
+      "id": "new",
+      "name": "New",
+      "color": "#E91E63",
+      "description": "Recently added"
+    },
+    {
+      "id": "moved-in",
+      "name": "Moved In",
+      "color": "#4CAF50",
+      "description": "Moved to inner ring"
+    },
+    {
+      "id": "moved-out",
+      "name": "Moved Out",
+      "color": "#FF5722",
+      "description": "Moved to outer ring"
+    }
+  ],
+  "dealSizes": [
+    {
+      "id": "small",
+      "name": "< $100k",
+      "value": 1.0,
+      "description": "Small deals under $100k"
+    },
+    {
+      "id": "medium",
+      "name": "$100k - $500k",
+      "value": 2.0,
+      "description": "Medium deals $100k to $500k"
+    },
+    {
+      "id": "large",
+      "name": "> $500k",
+      "value": 3.0,
+      "description": "Large deals over $500k"
+    }
+  ],
+  "layout": {
+    "startAngleDeg": 0,
+    "padding": 20,
+    "jitter": 0.85,
+    "minRadius": 80,
+    "maxRadius": 400,
+    "dotMinSize": 8,
+    "dotMaxSize": 40
+  },
+  "entries": [
+    {
+      "id": "cloud-migration-project",
+      "name": "Cloud Migration Project",
+      "ring": "q1",
+      "quadrant": "infrastructure",
+      "isNew": false,
+      "status": "on-track",
+      "descriptionHtml": "<p>Small cloud migration initiative</p>",
+      "tags": [
+        "cloud",
+        "migration"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 1.0,
+      "owner": null
+    },
+    {
+      "id": "enterprise-crm-system",
+      "name": "Enterprise CRM System",
+      "ring": "q1",
+      "quadrant": "applications",
+      "isNew": false,
+      "status": "on-track",
+      "descriptionHtml": "<p>Medium-sized CRM implementation</p>",
+      "tags": [
+        "crm",
+        "sales"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 2.0,
+      "owner": null
+    },
+    {
+      "id": "digital-transformation-program",
+      "name": "Digital Transformation Program",
+      "ring": "q2",
+      "quadrant": "services",
+      "isNew": false,
+      "status": "at-risk",
+      "descriptionHtml": "<p>Large-scale digital transformation</p>",
+      "tags": [
+        "transformation",
+        "strategy"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 3.0,
+      "owner": null
+    },
+    {
+      "id": "ai-analytics-platform",
+      "name": "AI Analytics Platform",
+      "ring": "q2",
+      "quadrant": "emerging",
+      "isNew": false,
+      "status": "new",
+      "descriptionHtml": "<p>AI-powered analytics solution</p>",
+      "tags": [
+        "ai",
+        "analytics"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 2.0,
+      "owner": null
+    },
+    {
+      "id": "security-upgrade",
+      "name": "Security Upgrade",
+      "ring": "q3",
+      "quadrant": "infrastructure",
+      "isNew": false,
+      "status": "on-track",
+      "descriptionHtml": "<p>Security infrastructure upgrade</p>",
+      "tags": [
+        "security",
+        "infrastructure"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 1.0,
+      "owner": null
+    },
+    {
+      "id": "data-warehouse-modernization",
+      "name": "Data Warehouse Modernization",
+      "ring": "q3",
+      "quadrant": "applications",
+      "isNew": false,
+      "status": "blocked",
+      "descriptionHtml": "<p>Large data warehouse project</p>",
+      "tags": [
+        "data",
+        "warehouse"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 3.0,
+      "owner": null
+    },
+    {
+      "id": "iot-platform",
+      "name": "IoT Platform",
+      "ring": "q4",
+      "quadrant": "emerging",
+      "isNew": false,
+      "status": "new",
+      "descriptionHtml": "<p>IoT platform development</p>",
+      "tags": [
+        "iot",
+        "platform"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 2.0,
+      "owner": null
+    },
+    {
+      "id": "legacy-system-replacement",
+      "name": "Legacy System Replacement",
+      "ring": "beyond",
+      "quadrant": "applications",
+      "isNew": false,
+      "status": "on-track",
+      "descriptionHtml": "<p>Long-term legacy replacement</p>",
+      "tags": [
+        "legacy",
+        "modernization"
+      ],
+      "link": null,
+      "linkName": null,
+      "customer": null,
+      "value": 3.0,
+      "owner": null
+    }
+  ]
+}
+</script>
+</body>
+</html>

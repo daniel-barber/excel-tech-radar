@@ -3,29 +3,35 @@ subtitle: "Q1 2026"
 
 # Time-based rings (innermost to outermost)
 rings:
-  - id: ready
-    name: "Ready"
+  - id: q1
+    name: "Q1"
     order: 0
     color: "#4CAF50"  # Green
-    description: "Immediate/Current opportunities"
+    description: "Quarter 1"
   
-  - id: year1
-    name: "Less Than 1 Year"
+  - id: q2
+    name: "Q2"
     order: 1
     color: "#2196F3"  # Blue
-    description: "Short-term opportunities (< 1 year)"
+    description: "Quarter 2"
   
-  - id: year1to3
-    name: "1-3 Years"
+  - id: q3
+    name: "Q3"
     order: 2
     color: "#FF9800"  # Orange
-    description: "Medium-term opportunities (1-3 years)"
+    description: "Quarter 3"
   
-  - id: year3plus
-    name: "3+ Years"
+  - id: q4
+    name: "Q4"
     order: 3
     color: "#9E9E9E"  # Gray
-    description: "Long-term opportunities (3+ years)"
+    description: "Quarter 4"
+
+  - id: beyond
+    name: "Beyond This Year"
+    order: 4
+    color: "#000000"  # Black
+    description: "Future opportunities beyond this year"
 
 # Quadrants (customize these for your use case)
 # Examples: Customer segments, Solution types, Business units, Regions
@@ -79,6 +85,40 @@ statuses:
     color: "#FF5722"  # Deep Orange
     description: "Moved to outer ring"
 
+# Deal size categories (for sizing dots)
+dealSizes:
+  - id: small
+    name: "< $100k"
+    value: 1
+    description: "Small deals under $100k"
+  
+  - id: medium
+    name: "$100k - $500k"
+    value: 2
+    description: "Medium deals $100k to $500k"
+  
+  - id: large
+    name: "> $500k"
+    value: 3
+    description: "Large deals over $500k"
+
+# Propensity to win categories (for coloring dots)
+propensityToWin:
+  - id: low
+    name: "Low"
+    color: "#F44336"  # Red
+    description: "Low propensity to win"
+  
+  - id: medium
+    name: "Medium"
+    color: "#FFC107"  # Yellow
+    description: "Medium propensity to win"
+  
+  - id: high
+    name: "High"
+    color: "#4CAF50"  # Green
+    description: "High propensity to win"
+
 # Layout configuration
 layout:
   startAngleDeg: 0        # 0° at right; clockwise
@@ -102,5 +142,7 @@ columnMappings:
   customer: "customer"      # optional
   value: "value"            # optional (for sizing dots)
   owner: "owner"            # optional
+  dealSize: "dealSize"      # optional (deal size category)
+  propensityToWin: "propensityToWin"  # optional (propensity to win - controls dot color)
 
 # Made with Bob

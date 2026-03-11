@@ -64,6 +64,24 @@ def build_radar_json(
             }
             for status in config.statuses
         ],
+        "dealSizes": [
+            {
+                "id": dealSize.id,
+                "name": dealSize.name,
+                "value": dealSize.value,
+                "description": dealSize.description,
+            }
+            for dealSize in config.dealSizes
+        ],
+        "propensityToWin": [
+            {
+                "id": propensity.id,
+                "name": propensity.name,
+                "color": propensity.color,
+                "description": propensity.description,
+            }
+            for propensity in config.propensityToWin
+        ],
         "layout": {
             "startAngleDeg": config.layout.startAngleDeg,
             "padding": config.layout.padding,

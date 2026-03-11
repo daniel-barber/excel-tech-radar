@@ -46,9 +46,10 @@ Your Excel file should have these columns:
 | Column | Required | Description |
 |--------|----------|-------------|
 | name | Yes | Entry name (unique) |
-| ring | Yes | Ring/horizon (e.g., "Ready", "<1 Year", "Now") |
+| ring | Yes | Ring/horizon (e.g., "Q1", "Q2", "Q3", "Q4", "Beyond This Year") |
 | quadrant | No | Category/sector (e.g., "Data", "Platform") |
 | status | No | Status (e.g., "On Track", "At Risk", "New") |
+| dealSize | No | Deal size category (e.g., "< $100k", "$100k - $500k", "> $500k") |
 | description | No | HTML description with formatting |
 | tags | No | Comma-separated tags for filtering |
 | link | No | External URL |
@@ -60,19 +61,34 @@ Edit `config.yml` to customize your radar:
 
 - **Rings**: Define your time horizons, maturity levels, or priority tiers
 - **Statuses**: Configure status options with custom colors
+- **Deal Sizes**: Define deal size categories that control circle sizes
 - **Layout**: Adjust visual appearance (padding, sizing, angles)
 
 Example:
 ```yaml
 rings:
-  - id: ready
-    name: "Ready"
+  - id: q1
+    name: "Q1"
     order: 0
-    color: "#10b981"
-  - id: year1
-    name: "<1 Year"
+    color: "#4CAF50"
+  - id: q2
+    name: "Q2"
     order: 1
-    color: "#3b82f6"
+    color: "#2196F3"
+
+dealSizes:
+  - id: small
+    name: "< $100k"
+    value: 1
+    description: "Small deals under $100k"
+  - id: medium
+    name: "$100k - $500k"
+    value: 2
+    description: "Medium deals $100k to $500k"
+  - id: large
+    name: "> $500k"
+    value: 3
+    description: "Large deals over $500k"
 ```
 
 ## Advanced Usage
@@ -115,6 +131,7 @@ excel-tech-radar/
 
 - **Keep it Simple**: Start with just rings and names, add complexity as needed
 - **Use Categories Flexibly**: Quadrants are optional - use them only if they add value
+- **Deal Sizes**: Use the dealSize column to visually emphasize larger opportunities with bigger circles
 - **Rich Descriptions**: Use HTML formatting for better readability
 - **Export Often**: Generate PNGs for presentations and documentation
 - **Multiple Projects**: Create separate Excel files for different teams or initiatives

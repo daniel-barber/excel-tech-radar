@@ -266,7 +266,7 @@ class RadarAPI:
                 df = pd.read_excel(excel_file, sheet_name=sheet_name)
                 
                 # Ensure all required columns exist
-                required_cols = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName']
+                required_cols = ['name', 'ring', 'quadrant', 'status', 'dealSize', 'propensityToWin', 'description', 'tags', 'link', 'linkName']
                 for col in required_cols:
                     if col not in df.columns:
                         df[col] = pd.Series(dtype='object')
@@ -369,7 +369,7 @@ class RadarAPI:
                 
                 # First pass: convert column types if needed
                 # Convert any numeric columns that should be strings
-                string_fields = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName', 'customer', 'owner']
+                string_fields = ['name', 'ring', 'quadrant', 'status', 'dealSize', 'propensityToWin', 'description', 'tags', 'link', 'linkName', 'customer', 'owner']
                 for key in string_fields:
                     if key in df.columns and pd.api.types.is_numeric_dtype(df[key]):
                         df[key] = df[key].astype('object')

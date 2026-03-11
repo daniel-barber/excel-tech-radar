@@ -36,6 +36,24 @@ class StatusConfig(BaseModel):
     description: Optional[str] = None
 
 
+class DealSizeConfig(BaseModel):
+    """Configuration for deal size categories."""
+
+    id: str
+    name: str
+    value: float
+    description: Optional[str] = None
+
+
+class PropensityToWinConfig(BaseModel):
+    """Configuration for propensity to win categories."""
+
+    id: str
+    name: str
+    color: str
+    description: Optional[str] = None
+
+
 class LayoutConfig(BaseModel):
     """Layout configuration for the radar."""
 
@@ -62,6 +80,8 @@ class ColumnMappings(BaseModel):
     customer: str = "customer"
     value: str = "value"
     owner: str = "owner"
+    dealSize: str = "dealSize"
+    propensityToWin: str = "propensityToWin"
 
 
 class RadarConfig(BaseModel):
@@ -72,6 +92,8 @@ class RadarConfig(BaseModel):
     rings: List[RingConfig]
     quadrants: List[QuadrantConfig]
     statuses: List[StatusConfig] = Field(default_factory=list)
+    dealSizes: List[DealSizeConfig] = Field(default_factory=list)
+    propensityToWin: List[PropensityToWinConfig] = Field(default_factory=list)
     layout: LayoutConfig = Field(default_factory=LayoutConfig)
     columnMappings: ColumnMappings = Field(default_factory=ColumnMappings)
 
@@ -92,6 +114,8 @@ class RadarEntry(BaseModel):
     customer: Optional[str] = None
     value: Optional[float] = None
     owner: Optional[str] = None
+    dealSize: Optional[str] = None
+    propensityToWin: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -213,6 +237,8 @@ def auto_discover_config(
     # Try to find config.yml - check provided path, then project root, then Excel directory
     config_rings = []
     config_statuses = []
+    config_dealsizes = []
+    config_propensitytowin = []
     
     if config_path is None:
         # Look for config.yml in project root (2 levels up from data/)
@@ -223,6 +249,8 @@ def auto_discover_config(
             config = load_config(config_path)
             config_rings = [ring.name for ring in config.rings]
             config_statuses = [status.name for status in config.statuses]
+            config_dealsizes = config.dealSizes if config.dealSizes else []
+            config_propensitytowin = config.propensityToWin if config.propensityToWin else []
             # Don't load quadrants from config - keep them flexible and Excel-based
         except Exception:
             pass  # If config loading fails, fall back to auto-discovery
@@ -354,6 +382,8 @@ def auto_discover_config(
         rings=rings,
         quadrants=quadrants,
         statuses=statuses,
+        dealSizes=config_dealsizes,
+        propensityToWin=config_propensitytowin,
         layout=LayoutConfig(),
         columnMappings=ColumnMappings()
     )
@@ -408,6 +438,10 @@ def load_excel(
     
     status_ids = {slugify(s.name): s.id for s in config.statuses}
     status_ids.update({s.id: s.id for s in config.statuses})
+    
+    # Create deal size lookup maps (name -> value)
+    dealsize_values = {slugify(d.name): d.value for d in config.dealSizes}
+    dealsize_values.update({d.id: d.value for d in config.dealSizes})
     
     entries = []
     seen_names = set()
@@ -504,9 +538,26 @@ def load_excel(
             except (ValueError, TypeError):
                 pass
         
+        # Get deal size and map to numeric value (overrides value field if present)
+        dealSize = None
+        if col_map.dealSize in df.columns and not pd.isna(row[col_map.dealSize]):
+            dealsize_str = str(row[col_map.dealSize]).strip()
+            if dealsize_str:
+                dealSize = dealsize_str  # Store the original deal size name
+                dealsize_slug = slugify(dealsize_str)
+                if dealsize_slug in dealsize_values:
+                    value = dealsize_values[dealsize_slug]
+        
         owner = None
         if col_map.owner in df.columns and not pd.isna(row[col_map.owner]):
             owner = str(row[col_map.owner]).strip()
+        
+        # Get propensity to win
+        propensityToWin = None
+        if col_map.propensityToWin in df.columns and not pd.isna(row[col_map.propensityToWin]):
+            propensity_str = str(row[col_map.propensityToWin]).strip()
+            if propensity_str:
+                propensityToWin = propensity_str
         
         # Create entry dict
         entry = {
@@ -522,6 +573,8 @@ def load_excel(
             "customer": customer,
             "value": value,
             "owner": owner,
+            "dealSize": dealSize,
+            "propensityToWin": propensityToWin,
         }
         
         entries.append(entry)

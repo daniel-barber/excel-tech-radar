@@ -188,6 +188,12 @@ function updateFormDatalists(data) {
     
     // Update status select
     updateStatusDatalist(data);
+    
+    // Update deal size select
+    updateDealSizeDatalist(data);
+    
+    // Update propensity to win select
+    updatePropensityToWinDatalist(data);
 }
 
 function updateDatalist(elementId, configItems, entries, fieldName) {
@@ -372,6 +378,88 @@ function updateStatusDatalist(data) {
         option.value = status;
         // Capitalize first letter for display
         option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        select.appendChild(option);
+    });
+    
+    // Restore previous value if it exists in the new options
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+function updateDealSizeDatalist(data) {
+    const select = document.getElementById('edit-dealsize');
+    if (!select) {
+        console.warn('Deal size select not found');
+        return;
+    }
+    
+    // Get deal sizes from config
+    let dealSizes = [];
+    if (data && data.dealSizes && Array.isArray(data.dealSizes) && data.dealSizes.length > 0) {
+        console.log('Using config dealSizes:', data.dealSizes.map(d => d.name));
+        dealSizes = data.dealSizes.map(d => d.name);
+    } else {
+        console.log('No config dealSizes found, using fallback');
+        // Fallback to standard deal sizes
+        dealSizes = ['< $100k', '$100k - $500k', '> $500k'];
+    }
+    
+    console.log(`Populating edit-dealsize with ${dealSizes.length} values:`, dealSizes);
+    
+    // Get current value before clearing
+    const currentValue = select.value;
+    
+    // Keep the first "-- Select Deal Size --" option
+    const firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    dealSizes.forEach(dealSize => {
+        const option = document.createElement('option');
+        option.value = dealSize;
+        option.textContent = dealSize;
+        select.appendChild(option);
+    });
+    
+    // Restore previous value if it exists in the new options
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+function updatePropensityToWinDatalist(data) {
+    const select = document.getElementById('edit-propensity');
+    if (!select) {
+        console.warn('Propensity to win select not found');
+        return;
+    }
+    
+    // Get propensity to win options from config
+    let propensityOptions = [];
+    if (data && data.propensityToWin && Array.isArray(data.propensityToWin) && data.propensityToWin.length > 0) {
+        console.log('Using config propensityToWin:', data.propensityToWin.map(p => p.name));
+        propensityOptions = data.propensityToWin.map(p => p.name);
+    } else {
+        console.log('No config propensityToWin found, using fallback');
+        // Fallback to standard propensity options
+        propensityOptions = ['Low', 'Medium', 'High'];
+    }
+    
+    console.log(`Populating edit-propensity with ${propensityOptions.length} values:`, propensityOptions);
+    
+    // Get current value before clearing
+    const currentValue = select.value;
+    
+    // Keep the first "-- Select Propensity --" option
+    const firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    propensityOptions.forEach(propensity => {
+        const option = document.createElement('option');
+        option.value = propensity;
+        option.textContent = propensity;
         select.appendChild(option);
     });
     
@@ -602,6 +690,23 @@ async function refreshGrid() {
     }
 }
 
+// ===== Dot Size Calculation =====
+function calculateDotSize(entry, layout, allEntries) {
+    if (entry.value && entry.value > 0) {
+        // Size based on value
+        const maxValue = Math.max(...allEntries.map(e => e.value || 0));
+        if (maxValue > 0) {
+            const normalized = entry.value / maxValue;
+            const size = layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
+            console.log(`Entry: ${entry.name}, value: ${entry.value}, maxValue: ${maxValue}, normalized: ${normalized}, size: ${size}`);
+            return size;
+        }
+    }
+    const defaultSize = (layout.dotMinSize + layout.dotMaxSize) / 2;
+    console.log(`Entry: ${entry.name}, no value, using default size: ${defaultSize}`);
+    return defaultSize;
+}
+
 // ===== Radar Visualization =====
 // (Reuse code from app.js - simplified version here)
 
@@ -709,14 +814,25 @@ function renderRadar(data, searchTerm = '') {
         
         const ring = data.rings[ringIndex];
         
+        const dotSize = calculateDotSize(entry, data.layout, data.entries);
+        
+        // Get color from propensityToWin, fallback to blue
+        let dotColor = '#2196F3';  // Default blue color
+        if (entry.propensityToWin && data.propensityToWin) {
+            const propensity = data.propensityToWin.find(p => p.name === entry.propensityToWin);
+            if (propensity && propensity.color) {
+                dotColor = propensity.color;
+            }
+        }
+        
         g.append('circle')
             .attr('class', 'radar-dot')
             .attr('data-entry-id', entry.id)
             .attr('data-entry-name', entry.name)
             .attr('cx', x)
             .attr('cy', y)
-            .attr('r', 8)
-            .attr('fill', ring.color)
+            .attr('r', dotSize)
+            .attr('fill', dotColor)
             .attr('stroke', entry.status === 'new' ? '#ec4899' : '#333')
             .attr('stroke-width', entry.status === 'new' ? 3 : 1.5)
             .style('cursor', 'pointer')
@@ -729,7 +845,7 @@ function renderRadar(data, searchTerm = '') {
             .attr('class', 'radar-label')
             .attr('data-entry-id', entry.id)
             .attr('x', x)
-            .attr('y', y + 18)
+            .attr('y', y + dotSize + 10)
             .attr('text-anchor', 'middle')
             .text(entry.name);
     });
@@ -953,6 +1069,32 @@ function showEditEntryForm() {
     const statusSelect = document.getElementById('edit-status');
     const matchingStatus = findMatchingOption(statusSelect, currentDetailEntry.status);
     statusSelect.value = matchingStatus;
+    
+    // Set deal size - check if entry has dealSize field directly, otherwise map from value
+    const dealSizeSelect = document.getElementById('edit-dealsize');
+    if (currentDetailEntry.dealSize) {
+        // Entry has dealSize field directly (from Excel)
+        dealSizeSelect.value = currentDetailEntry.dealSize;
+    } else if (currentDetailEntry.value && radarData && radarData.dealSizes) {
+        // Fall back to mapping from value field
+        const matchingDealSize = radarData.dealSizes.find(d => d.value === currentDetailEntry.value);
+        if (matchingDealSize) {
+            dealSizeSelect.value = matchingDealSize.name;
+        } else {
+            dealSizeSelect.value = '';
+        }
+    } else {
+        dealSizeSelect.value = '';
+    }
+    
+    // Set propensity to win
+    const propensitySelect = document.getElementById('edit-propensity');
+    if (currentDetailEntry.propensityToWin) {
+        propensitySelect.value = currentDetailEntry.propensityToWin;
+    } else {
+        propensitySelect.value = '';
+    }
+    
     // Handle tags - filter out empty arrays and string "[]"
     let tagsValue = '';
     if (Array.isArray(currentDetailEntry.tags) && currentDetailEntry.tags.length > 0) {
@@ -1031,6 +1173,8 @@ function showNewEntryForm() {
     document.getElementById('edit-ring').value = '';
     document.getElementById('edit-quadrant').value = '';
     document.getElementById('edit-status').value = '';
+    document.getElementById('edit-dealsize').value = '';
+    document.getElementById('edit-propensity').value = '';
     document.getElementById('edit-tags').value = '';
     document.getElementById('edit-link-name').value = '';
     document.getElementById('edit-link').value = '';
@@ -1113,11 +1257,16 @@ async function saveEditEntry(event) {
     const descriptionHtml = quillEditor ? quillEditor.root.innerHTML : '';
     
     // Get form data
+    const dealSizeValue = document.getElementById('edit-dealsize').value;
+    const propensityValue = document.getElementById('edit-propensity').value;
+    
     const entryData = {
         name: document.getElementById('edit-name').value,
         ring: document.getElementById('edit-ring').value,
         quadrant: document.getElementById('edit-quadrant').value,
         status: document.getElementById('edit-status').value || null,
+        dealSize: dealSizeValue || null,
+        propensityToWin: propensityValue || null,
         tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
         description: descriptionHtml,
         linkName: document.getElementById('edit-link-name').value || null,
