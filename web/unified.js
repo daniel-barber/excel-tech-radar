@@ -87,9 +87,22 @@ async function loadProjects() {
             projectList.appendChild(item);
         });
         
-        // Auto-select first project
+        // Check URL hash for project selection
+        const urlHash = window.location.hash;
+        let projectToSelect = null;
+        
+        if (urlHash && urlHash.startsWith('#project=')) {
+            const projectId = urlHash.substring(9); // Remove '#project='
+            // Check if project exists
+            const projectExists = data.projects.some(p => p.id === projectId);
+            if (projectExists) {
+                projectToSelect = projectId;
+            }
+        }
+        
+        // Auto-select project from URL or first project
         if (data.projects.length > 0 && !currentProject) {
-            selectProject(data.projects[0].id);
+            selectProject(projectToSelect || data.projects[0].id);
         }
     } catch (error) {
         projectList.innerHTML = '<div class="loading">Error loading projects</div>';
@@ -152,6 +165,9 @@ async function selectProject(projectId) {
     currentProjectId = projectId;  // Set global project ID for API calls
     document.getElementById('active-project-name').textContent =
         projectId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    // Update URL hash to persist project selection
+    window.location.hash = `project=${projectId}`;
     
     // Reset dirty flag
     isDirty = false;
@@ -1251,6 +1267,17 @@ async function saveEditEntry(event) {
 document.addEventListener('DOMContentLoaded', () => {
     // Load projects on start
     loadProjects();
+    
+    // Handle browser back/forward navigation
+    window.addEventListener('hashchange', () => {
+        const urlHash = window.location.hash;
+        if (urlHash && urlHash.startsWith('#project=')) {
+            const projectId = urlHash.substring(9);
+            if (projectId !== currentProject) {
+                selectProject(projectId);
+            }
+        }
+    });
     
     // Mode switching
     document.getElementById('view-mode-btn').addEventListener('click', switchToViewMode);
