@@ -1,0 +1,80 @@
+# Excel Tech Radar - Docker Compose Configuration
+version: '3.8'
+
+services:
+  radar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: excel-tech-radar
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist data directory
+      - ./data:/app/data
+      # Persist logs
+      - ./logs:/app/logs
+      # Optional: Mount custom config
+      - ./config:/app/config:ro
+    environment:
+      # Server Configuration
+      - RADAR_HOST=0.0.0.0
+      - RADAR_PORT=8080
+      - RADAR_DEBUG=false
+      
+      # Data Configuration
+      - RADAR_DATA_DIR=/app/data
+      - RADAR_DIST_DIR=/app/dist
+      
+      # Backup Configuration
+      - RADAR_BACKUP_ENABLED=true
+      - RADAR_MAX_BACKUPS=10
+      - RADAR_RETENTION_DAYS=90
+      
+      # Logging Configuration
+      - RADAR_LOG_LEVEL=INFO
+      - RADAR_LOG_FILE=/app/logs/radar.log
+      - RADAR_LOG_FORMAT=json
+      
+      # Security Configuration
+      - RADAR_SECRET_KEY=${RADAR_SECRET_KEY:-change-me-in-production}
+      - RADAR_ALLOWED_ORIGINS=*
+      
+      # Feature Flags
+      - RADAR_ENABLE_EXPORT=true
+      - RADAR_ENABLE_IMPORT=true
+      - RADAR_ENABLE_DELETE=true
+      
+      # Performance
+      - RADAR_MAX_UPLOAD_SIZE=50
+      - RADAR_REQUEST_TIMEOUT=60
+      
+      # Scheduler Configuration
+      - RADAR_ENABLE_SCHEDULER=true
+      - RADAR_ENABLE_SCHEDULED_CLEANUP=true
+      - RADAR_ENABLE_AUTO_BACKUP=true
+      - RADAR_ENABLE_STORAGE_MONITORING=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - radar-network
+    labels:
+      - "com.excel-tech-radar.description=Excel Tech Radar Application"
+      - "com.excel-tech-radar.version=1.0.0"
+
+networks:
+  radar-network:
+    driver: bridge
+
+volumes:
+  radar-data:
+    driver: local
+  radar-logs:
+    driver: local
+
+# Made with Bob

@@ -44,6 +44,12 @@ class Config:
         self.max_upload_size = int(os.getenv('RADAR_MAX_UPLOAD_SIZE', '10'))  # MB
         self.request_timeout = int(os.getenv('RADAR_REQUEST_TIMEOUT', '30'))  # seconds
         
+        # Scheduler Configuration
+        self.enable_scheduler = os.getenv('RADAR_ENABLE_SCHEDULER', 'true').lower() == 'true'
+        self.enable_scheduled_cleanup = os.getenv('RADAR_ENABLE_SCHEDULED_CLEANUP', 'true').lower() == 'true'
+        self.enable_auto_backup = os.getenv('RADAR_ENABLE_AUTO_BACKUP', 'false').lower() == 'true'
+        self.enable_storage_monitoring = os.getenv('RADAR_ENABLE_STORAGE_MONITORING', 'true').lower() == 'true'
+        
         # Validate configuration
         self._validate()
     

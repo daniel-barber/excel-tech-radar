@@ -17,6 +17,8 @@ from .loader import auto_discover_config, load_excel, validate_entries
 from .builder import build_radar_json
 from .config import Config
 from .logging_config import setup_logging, get_logger
+from .backup_manager import BackupManager
+from .scheduler import create_default_tasks, TaskScheduler
 
 
 class RadarAPI:
@@ -61,6 +63,22 @@ class RadarAPI:
         self.dist_dir.mkdir(exist_ok=True)
         self.logger.info(f"Data directory: {self.data_dir.absolute()}")
         self.logger.info(f"Dist directory: {self.dist_dir.absolute()}")
+        
+        # Initialize backup manager
+        self.backup_manager = BackupManager(
+            data_dir=self.data_dir,
+            max_backups=self.max_backups,
+            retention_days=config.retention_days
+        )
+        self.logger.info("Backup manager initialized")
+        
+        # Initialize task scheduler
+        self.scheduler = create_default_tasks(self.backup_manager, config)
+        if config.enable_scheduler if hasattr(config, 'enable_scheduler') else True:
+            self.scheduler.start()
+            self.logger.info("Task scheduler started")
+        else:
+            self.logger.info("Task scheduler disabled")
         
         # Register error handlers
         self._register_error_handlers()
@@ -694,23 +712,260 @@ class RadarAPI:
                 data = request.get_json() or {}
                 retention_days = data.get('retention_days', 30)
                 
-                # Cleanup deleted files
-                self._cleanup_deleted_files(retention_days)
-                
-                # Cleanup backups for all projects
-                cleanup_count = 0
-                for excel_file in self.data_dir.glob("*.xlsx"):
-                    if not excel_file.name.endswith('.deleted'):
-                        project_id = excel_file.stem
-                        self._cleanup_old_backups(project_id)
-                        cleanup_count += 1
+                # Use backup manager for cleanup
+                stats = self.backup_manager.cleanup_all_backups()
                 
                 return jsonify({
                     'success': True,
-                    'message': f'Cleanup completed for {cleanup_count} projects',
-                    'retention_days': retention_days
+                    'message': 'Cleanup completed',
+                    'stats': stats
                 })
             except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/backups', methods=['GET'])
+        def list_all_backups():
+            """List all backups across all projects."""
+            try:
+                project_id = request.args.get('project_id')
+                backups = self.backup_manager.list_backups(project_id)
+                
+                return jsonify({
+                    'backups': [b.to_dict() for b in backups],
+                    'count': len(backups)
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to list backups: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/backups', methods=['GET'])
+        def list_project_backups(project_id: str):
+            """List backups for a specific project."""
+            try:
+                backups = self.backup_manager.list_backups(project_id)
+                
+                return jsonify({
+                    'project_id': project_id,
+                    'backups': [b.to_dict() for b in backups],
+                    'count': len(backups)
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to list backups for {project_id}: {e}", exc_info=True, extra={'project_id': project_id})
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/backups', methods=['POST'])
+        def create_backup(project_id: str):
+            """Create a manual backup of a project."""
+            try:
+                excel_file = self.data_dir / f"{project_id}.xlsx"
+                if not excel_file.exists():
+                    return jsonify({'error': 'Project not found'}), 404
+                
+                backup_path = self.backup_manager.create_backup(project_id, backup_type='manual')
+                
+                if backup_path:
+                    return jsonify({
+                        'success': True,
+                        'message': 'Backup created successfully',
+                        'backup_file': backup_path.name,
+                        'size_mb': round(backup_path.stat().st_size / (1024 * 1024), 2)
+                    })
+                else:
+                    return jsonify({'error': 'Failed to create backup'}), 500
+            except Exception as e:
+                self.logger.error(f"Failed to create backup for {project_id}: {e}", exc_info=True, extra={'project_id': project_id})
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/backups/<backup_timestamp>', methods=['DELETE'])
+        def delete_backup(project_id: str, backup_timestamp: str):
+            """Delete a specific backup."""
+            try:
+                success = self.backup_manager.delete_backup(project_id, backup_timestamp)
+                
+                if success:
+                    return jsonify({
+                        'success': True,
+                        'message': 'Backup deleted successfully'
+                    })
+                else:
+                    return jsonify({'error': 'Backup not found'}), 404
+            except Exception as e:
+                self.logger.error(f"Failed to delete backup: {e}", exc_info=True, extra={'project_id': project_id})
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/restore', methods=['POST'])
+        def restore_from_backup(project_id: str):
+            """Restore a project from a backup."""
+            try:
+                data = request.get_json() or {}
+                backup_timestamp = data.get('backup_timestamp')
+                
+                success = self.backup_manager.restore_backup(project_id, backup_timestamp)
+                
+                if success:
+                    # Rebuild radar after restore
+                    radar_data = self._build_radar_for_project(project_id)
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': 'Project restored successfully',
+                        'radar': radar_data
+                    })
+                else:
+                    return jsonify({'error': 'Failed to restore backup'}), 500
+            except Exception as e:
+                self.logger.error(f"Failed to restore backup for {project_id}: {e}", exc_info=True, extra={'project_id': project_id})
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/<project_id>/export', methods=['POST'])
+        def export_project(project_id: str):
+            """Export a project with all backups as a ZIP file."""
+            try:
+                excel_file = self.data_dir / f"{project_id}.xlsx"
+                if not excel_file.exists():
+                    return jsonify({'error': 'Project not found'}), 404
+                
+                export_path = self.backup_manager.export_project(project_id)
+                
+                if export_path:
+                    return send_file(
+                        export_path,
+                        as_attachment=True,
+                        download_name=export_path.name,
+                        mimetype='application/zip'
+                    )
+                else:
+                    return jsonify({'error': 'Failed to export project'}), 500
+            except Exception as e:
+                self.logger.error(f"Failed to export project {project_id}: {e}", exc_info=True, extra={'project_id': project_id})
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/projects/import', methods=['POST'])
+        def import_project():
+            """Import a project from a ZIP export file."""
+            try:
+                if 'file' not in request.files:
+                    return jsonify({'error': 'No file provided'}), 400
+                
+                uploaded_file = request.files['file']
+                
+                if uploaded_file.filename == '':
+                    return jsonify({'error': 'No file selected'}), 400
+                
+                if not uploaded_file.filename.endswith('.zip'):
+                    return jsonify({'error': 'Invalid file type. Please upload a ZIP file'}), 400
+                
+                # Save uploaded file temporarily
+                temp_path = self.data_dir / f"temp_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                uploaded_file.save(temp_path)
+                
+                try:
+                    # Check if overwrite is allowed
+                    overwrite = request.form.get('overwrite', 'false').lower() == 'true'
+                    
+                    # Import project
+                    project_id = self.backup_manager.import_project(temp_path, overwrite=overwrite)
+                    
+                    if project_id:
+                        return jsonify({
+                            'success': True,
+                            'message': 'Project imported successfully',
+                            'project_id': project_id
+                        })
+                    else:
+                        return jsonify({'error': 'Failed to import project'}), 500
+                finally:
+                    # Clean up temp file
+                    if temp_path.exists():
+                        temp_path.unlink()
+            except Exception as e:
+                self.logger.error(f"Failed to import project: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/storage/stats', methods=['GET'])
+        def get_storage_stats():
+            """Get storage statistics for the data directory."""
+            try:
+                stats = self.backup_manager.get_storage_stats()
+                return jsonify(stats)
+            except Exception as e:
+                self.logger.error(f"Failed to get storage stats: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/scheduler/status', methods=['GET'])
+        def get_scheduler_status():
+            """Get scheduler status and task information."""
+            try:
+                return jsonify({
+                    'running': self.scheduler.is_running(),
+                    'tasks': self.scheduler.get_task_status()
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to get scheduler status: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/scheduler/start', methods=['POST'])
+        def start_scheduler():
+            """Start the task scheduler."""
+            try:
+                if self.scheduler.is_running():
+                    return jsonify({'message': 'Scheduler already running'}), 200
+                
+                self.scheduler.start()
+                return jsonify({
+                    'success': True,
+                    'message': 'Scheduler started'
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to start scheduler: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/scheduler/stop', methods=['POST'])
+        def stop_scheduler():
+            """Stop the task scheduler."""
+            try:
+                if not self.scheduler.is_running():
+                    return jsonify({'message': 'Scheduler not running'}), 200
+                
+                self.scheduler.stop()
+                return jsonify({
+                    'success': True,
+                    'message': 'Scheduler stopped'
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to stop scheduler: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/scheduler/tasks/<task_name>/enable', methods=['POST'])
+        def enable_task(task_name: str):
+            """Enable a specific scheduled task."""
+            try:
+                success = self.scheduler.enable_task(task_name)
+                if success:
+                    return jsonify({
+                        'success': True,
+                        'message': f'Task "{task_name}" enabled'
+                    })
+                else:
+                    return jsonify({'error': 'Task not found'}), 404
+            except Exception as e:
+                self.logger.error(f"Failed to enable task {task_name}: {e}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/scheduler/tasks/<task_name>/disable', methods=['POST'])
+        def disable_task(task_name: str):
+            """Disable a specific scheduled task."""
+            try:
+                success = self.scheduler.disable_task(task_name)
+                if success:
+                    return jsonify({
+                        'success': True,
+                        'message': f'Task "{task_name}" disabled'
+                    })
+                else:
+                    return jsonify({'error': 'Task not found'}), 404
+            except Exception as e:
+                self.logger.error(f"Failed to disable task {task_name}: {e}", exc_info=True)
                 return jsonify({'error': str(e)}), 500
         
         

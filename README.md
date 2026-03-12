@@ -1,61 +1,110 @@
-# Radar Studio
+# Excel Tech Radar
 
-A web-based visualization tool for creating interactive radar charts from Excel data. Perfect for tracking projects, initiatives, roadmaps, and strategic planning.
+A production-ready web application for creating and managing interactive technology radar visualizations from Excel data. Perfect for tracking projects, initiatives, technology adoption, and strategic planning.
 
-## Quick Start
+## ✨ Features
 
-### 1. Install
+### Core Capabilities
+- 📊 **Interactive Radar Visualization** - D3.js-powered circular radar with zoom/pan
+- 📝 **Excel-Based Storage** - All data in simple .xlsx files (no database required)
+- 🎨 **Fully Customizable** - Configure rings, categories, and visual appearance
+- 🔍 **Advanced Search & Filter** - Find entries by name, ring, category, deal size, or propensity
+- 📸 **PNG Export** - Generate high-quality images for presentations
+- ✏️ **Live Editing** - Edit entries directly in the web interface
+- 🔗 **Rich Content** - HTML descriptions, external links, and tags
+- 🏢 **Multi-Project Management** - Manage multiple radars in one interface
+
+### Business Intelligence
+- 💰 **Deal Size Visualization** - Circle sizes represent deal values
+- 📈 **Propensity to Win** - Color-coded confidence levels (High/Medium/Low)
+- ⭐ **Strategic Items** - Highlight strategic initiatives with special markers
+- 🏷️ **Classification Badges** - Visual indicators for deal size and propensity
+
+### Production Features
+- 🔐 **Security** - Configurable CORS, secret key management, environment-based config
+- 📝 **Structured Logging** - JSON and text formats with rotation and retention
+- 🔄 **Automated Backups** - Timestamped backups with configurable retention
+- 📦 **Export/Import** - ZIP-based project export with all backups
+- 🔧 **Health Monitoring** - System metrics, disk usage, memory tracking
+- ⏰ **Task Scheduler** - Automated cleanup, backups, and monitoring
+- 🐳 **Docker Support** - Production-ready containerization
+- 📊 **Storage Management** - Automatic cleanup of old backups and deleted files
+
+## 🚀 Quick Start
+
+### Option 1: Docker (Recommended)
 
 ```bash
-# Clone or download this repository
+# Clone repository
+git clone <repository-url>
 cd excel-tech-radar
 
-# Install dependencies
-pip install -e .
+# Generate secret key
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# Create .env file
+cp .env.example .env
+# Edit .env and set RADAR_SECRET_KEY
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Access application
+open http://localhost:8080
 ```
 
-### 2. Run
+### Option 2: Local Installation
 
 ```bash
-# Start the web interface (opens on http://localhost:8080)
+# Clone repository
+cd excel-tech-radar
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .[prod]
+
+# Create directories
+mkdir -p data dist logs
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Start server
 excel-radar serve
 ```
 
-### 3. Use
+### First Steps
 
-- **Create Project**: Click "New Project" and enter a name
-- **Add Entries**: Click "New Entry" or "Edit Data" to add items
-- **Visualize**: View your radar with interactive filtering and search
-- **Export**: Click "Export PNG" to save a snapshot
+1. **Access Web UI**: Open http://localhost:8080
+2. **Create Project**: Click "New Project" and enter a name
+3. **Add Entries**: Click "New Entry" or "Edit Data" to add items
+4. **Visualize**: View your interactive radar with filtering
+5. **Export**: Generate PNG images for presentations
 
-## Features
-
-- 📊 **Interactive Radar Visualization** - D3.js-powered circular radar with zoom/pan
-- 📝 **Excel-Based** - All data stored in simple .xlsx files (no database required)
-- 🎨 **Fully Customizable** - Configure rings, categories, and statuses via `config.yml`
-- 🔍 **Search & Filter** - Find entries by name, ring, category, or status
-- 📸 **PNG Export** - Generate high-quality images for presentations
-- ✏️ **Live Editing** - Edit entries directly in the web interface
-- 🔗 **Rich Content** - Support for HTML descriptions and external links
-- 🏢 **Multi-Project** - Manage multiple radars in one interface
-
-## Excel File Format
+## 📋 Excel File Format
 
 Your Excel file should have these columns:
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| name | Yes | Entry name (unique) |
-| ring | Yes | Ring/horizon (e.g., "Q1", "Q2", "Q3", "Q4", "Beyond This Year") |
-| quadrant | No | Category/sector (e.g., "Data", "Platform") |
-| status | No | Status (e.g., "On Track", "At Risk", "New") |
-| dealSize | No | Deal size category (e.g., "< $100k", "$100k - $500k", "> $500k") |
-| description | No | HTML description with formatting |
-| tags | No | Comma-separated tags for filtering |
-| link | No | External URL |
-| linkName | No | Display text for link |
+| Column | Required | Description | Example |
+|--------|----------|-------------|---------|
+| name | Yes | Entry name (unique) | "React", "Kubernetes" |
+| ring | Yes | Ring/horizon | "Q1", "Q2", "Adopt", "Trial" |
+| quadrant | No | Category/sector | "Languages & Frameworks" |
+| dealSize | No | Deal size category | "< $100k", "$100k - $500k", "> $500k" |
+| propensityToWin | No | Win probability | "High", "Medium", "Low" |
+| isStrategic | No | Strategic flag | TRUE, FALSE |
+| description | No | HTML description | "React is a JavaScript library..." |
+| tags | No | Comma-separated tags | "frontend, javascript, ui" |
+| link | No | External URL | "https://react.dev" |
+| linkName | No | Display text for link | "Official Website" |
 
-## Configuration
+**Note**: The `status` field has been removed. Use `propensityToWin` and `isStrategic` for better business intelligence.
+
+## ⚙️ Configuration
 
 Edit `config.yml` to customize your radar:
 
@@ -121,6 +170,124 @@ Most users only need `excel-radar serve`. Additional commands for special cases:
 ```bash
 # Validate Excel file format (troubleshooting)
 excel-radar validate --input data/myproject.xlsx
+
+## 📚 Documentation
+
+- **[API Documentation](./API.md)** - Complete REST API reference
+- **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment instructions
+- **[Troubleshooting](./TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Configuration Guide](./config/README.md)** - Detailed configuration options
+- **[Development Guide](./dev/README.md)** - Development scripts and tools
+
+## 🔄 Backup & Maintenance
+
+### Automated Backups
+- **Timestamped backups**: Created automatically on every save
+- **Configurable retention**: Keep N most recent backups per project
+- **Scheduled cleanup**: Daily cleanup of old backups and deleted files
+- **Weekly auto-backup**: Optional automated backup of all projects
+
+### Manual Operations
+```bash
+# Create manual backup
+curl -X POST http://localhost:8080/api/projects/my_project/backups
+
+# List backups
+curl http://localhost:8080/api/projects/my_project/backups
+
+# Restore from backup
+curl -X POST http://localhost:8080/api/projects/my_project/restore
+
+# Export project (with all backups)
+curl -X POST http://localhost:8080/api/projects/my_project/export -o export.zip
+
+# Storage statistics
+curl http://localhost:8080/api/storage/stats
+```
+
+## 🔧 API Endpoints
+
+The application provides a comprehensive REST API:
+
+- **Projects**: CRUD operations, upload, download, export/import
+- **Data**: Excel data manipulation, row operations
+- **Backups**: Create, list, restore, delete backups
+- **Scheduler**: Task management and status
+- **Health**: System monitoring and metrics
+- **Storage**: Usage statistics
+
+See [API.md](./API.md) for complete documentation.
+
+## 🐳 Docker Deployment
+
+### Quick Start
+```bash
+docker-compose up -d
+```
+
+### Custom Configuration
+```yaml
+# docker-compose.yml
+services:
+  radar:
+    environment:
+      - RADAR_SECRET_KEY=your-secret-key
+      - RADAR_MAX_BACKUPS=10
+      - RADAR_LOG_FORMAT=json
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+```
+
+### Production Deployment
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
+- AWS, Azure, Google Cloud deployment
+- Nginx reverse proxy configuration
+- SSL/TLS setup
+- Monitoring and scaling
+
+## 🔐 Security
+
+### Production Checklist
+- [ ] Generate unique `RADAR_SECRET_KEY`
+- [ ] Set `RADAR_DEBUG=false`
+- [ ] Configure `RADAR_ALLOWED_ORIGINS` (don't use `*`)
+- [ ] Use HTTPS with valid SSL certificate
+- [ ] Enable firewall and restrict ports
+- [ ] Regular security updates
+- [ ] Implement authentication (via reverse proxy)
+- [ ] Regular backup verification
+
+### Generate Secret Key
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+## 📊 Monitoring
+
+### Health Check
+```bash
+curl http://localhost:8080/api/health
+```
+
+Returns system metrics:
+- Service status
+- Uptime
+- Project count
+- Disk usage
+- Memory usage
+
+### Scheduler Status
+```bash
+curl http://localhost:8080/api/scheduler/status
+```
+
+Shows scheduled task information:
+- Task status (enabled/disabled)
+- Last run time
+- Next run time
+- Run count and error count
+
 
 # Build static files for hosting (advanced)
 excel-radar build --input data/myproject.xlsx --out dist/
