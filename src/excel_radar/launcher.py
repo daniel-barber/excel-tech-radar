@@ -1,5 +1,5 @@
 """
-Excel Tech Radar Launcher
+Radar Studio Launcher
 Provides a GUI for selecting the data directory and launching the application.
 """
 import sys
@@ -24,12 +24,12 @@ from excel_radar.config import Config
 
 
 class RadarLauncher:
-    """GUI launcher for Excel Tech Radar."""
+    """GUI launcher for Radar Studio."""
     
     def __init__(self):
         """Initialize the launcher."""
         self.root = tk.Tk()
-        self.root.title("Excel Tech Radar Launcher")
+        self.root.title("Radar Studio Launcher")
         self.root.geometry("600x400")
         self.root.resizable(False, False)
         
@@ -92,7 +92,7 @@ class RadarLauncher:
         
         title_label = tk.Label(
             header_frame,
-            text="Excel Tech Radar",
+            text="Radar Studio",
             font=("Arial", 24, "bold"),
             bg="#2196F3",
             fg="white"
@@ -196,7 +196,7 @@ class RadarLauncher:
         initial_dir = self.selected_directory if self.selected_directory else Path.home()
         
         directory = filedialog.askdirectory(
-            title="Select Data Directory for Excel Tech Radar",
+            title="Select Data Directory for Radar Studio",
             initialdir=initial_dir
         )
         

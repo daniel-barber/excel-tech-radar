@@ -14,8 +14,8 @@ is_mac = sys.platform == 'darwin'
 is_windows = sys.platform == 'win32'
 
 # Application metadata
-app_name = 'Excel Tech Radar'
-bundle_identifier = 'com.excel-radar.app'
+app_name = 'Radar Studio'
+bundle_identifier = 'com.radarstudio.app'
 
 # Data files to include
 datas = [
@@ -111,12 +111,12 @@ if is_mac:
     
     app = BUNDLE(
         coll,
-        name='Excel Tech Radar.app',
-        icon=None,  # TODO: Add icon file
+        name='Radar Studio.app',
+        icon='build/icons/icon.icns',
         bundle_identifier=bundle_identifier,
         info_plist={
-            'CFBundleName': app_name,
-            'CFBundleDisplayName': app_name,
+            'CFBundleName': 'Radar Studio',
+            'CFBundleDisplayName': 'Radar Studio',
             'CFBundleVersion': '0.1.0',
             'CFBundleShortVersionString': '0.1.0',
             'NSHighResolutionCapable': True,
@@ -133,7 +133,7 @@ elif is_windows:
         a.zipfiles,
         a.datas,
         [],
-        name='ExcelTechRadar',
+        name='RadarStudio',
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -146,7 +146,7 @@ elif is_windows:
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon=None,  # TODO: Add icon file
+        icon='build/icons/icon.ico',
     )
 
 else:
