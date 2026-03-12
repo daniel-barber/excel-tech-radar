@@ -5,6 +5,7 @@ Provides REST endpoints for managing radar projects and entries.
 import json
 import re
 import shutil
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -1082,19 +1083,32 @@ class RadarAPI:
                 traceback.print_exc()
                 return jsonify({'error': str(e)}), 500
         
+        # Helper function to get resource path (works with PyInstaller)
+        def get_resource_path(relative_path):
+            """Get absolute path to resource, works for dev and PyInstaller."""
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                base_path = Path(sys._MEIPASS)
+            else:
+                base_path = Path(__file__).parent.parent.parent
+            return base_path / relative_path
+        
         # Serve static files
         @self.app.route('/')
         def index():
             """Serve unified interface."""
-            web_dir = Path(__file__).parent.parent.parent / 'web'
+            web_dir = get_resource_path('web')
+            if not web_dir.exists():
+                self.logger.error(f"Web directory not found: {web_dir}")
+                return jsonify({'error': 'Web files not found'}), 500
             return send_from_directory(str(web_dir), 'unified.html')
         
         @self.app.route('/<path:path>')
         def static_files(path):
             """Serve static files from web/ or dist/."""
             # Get absolute paths
-            web_dir = Path(__file__).parent.parent.parent / 'web'
-            dist_dir = Path(__file__).parent.parent.parent / 'dist'
+            web_dir = get_resource_path('web')
+            dist_dir = get_resource_path('dist')
             
             # Try web/ first, then dist/
             web_file = web_dir / path
@@ -1105,6 +1119,7 @@ class RadarAPI:
             if dist_file.exists():
                 return send_from_directory(str(dist_dir), path)
             
+            self.logger.warning(f"File not found: {path} (tried {web_file} and {dist_file})")
             return jsonify({'error': 'File not found'}), 404
     
     def run(self, host='127.0.0.1', port=5173, debug=True):

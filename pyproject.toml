@@ -47,9 +47,13 @@ prod = [
     "gunicorn>=21.0.0",
     "psutil>=5.9.0",
 ]
+build = [
+    "pyinstaller>=6.0.0",
+]
 
 [project.scripts]
 excel-radar = "excel_radar.cli:app"
+excel-radar-launcher = "excel_radar.launcher:main"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/excel-tech-radar"

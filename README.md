@@ -2,6 +2,35 @@
 
 A production-ready web application for creating and managing interactive technology radar visualizations from Excel data. Perfect for tracking projects, initiatives, technology adoption, and strategic planning.
 
+## 📦 Download Standalone Application
+
+**No Python installation required!** Download the standalone application for your platform:
+
+### macOS
+- **[Download for macOS](https://github.com/yourusername/excel-tech-radar/releases/latest)** (DMG installer)
+- Requirements: macOS 10.13 or later
+- Installation:
+  1. Download the `.dmg` file
+  2. Open the DMG and drag "Excel Tech Radar" to Applications
+  3. Right-click the app and select "Open" (first time only)
+
+### Windows
+- **[Download for Windows](https://github.com/yourusername/excel-tech-radar/releases/latest)** (ZIP archive)
+- Requirements: Windows 10 or later
+- Installation:
+  1. Download the `.zip` file
+  2. Extract to a folder
+  3. Run `ExcelTechRadar.exe`
+  4. If Windows Defender shows a warning, click "More info" then "Run anyway"
+
+### Using the Standalone App
+1. **Launch** the application
+2. **Select Directory**: Click "Browse" to choose where your Excel files are stored
+3. **Launch Radar**: Click "Launch Radar" to start the server
+4. **Access**: Your browser will open automatically to http://localhost:5050
+
+> **Note**: The standalone application includes everything you need - no Python, no dependencies, just download and run!
+
 ## ✨ Features
 
 ### Core Capabilities
@@ -32,7 +61,11 @@ A production-ready web application for creating and managing interactive technol
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended)
+### Option 1: Standalone Application (Easiest)
+
+**No installation required!** See [Download Standalone Application](#-download-standalone-application) above.
+
+### Option 2: Docker (Recommended for Servers)
 
 ```bash
 # Clone repository
@@ -53,7 +86,7 @@ docker-compose up -d
 open http://localhost:8080
 ```
 
-### Option 2: Local Installation
+### Option 3: Local Python Installation (For Developers)
 
 ```bash
 # Clone repository
@@ -175,6 +208,7 @@ excel-radar validate --input data/myproject.xlsx
 
 - **[API Documentation](./API.md)** - Complete REST API reference
 - **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment instructions
+- **[Packaging Guide](./PACKAGING.md)** - Building standalone executables
 - **[Troubleshooting](./TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Configuration Guide](./config/README.md)** - Detailed configuration options
 - **[Development Guide](./dev/README.md)** - Development scripts and tools

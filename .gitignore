@@ -48,6 +48,12 @@ htmlcov/
 # Build outputs
 dist/
 *.pyc
+*.spec.bak
+
+# PyInstaller
+build/excel-radar-launcher/
+*.dmg
+*.zip
 
 # Temporary files
 *.tmp
