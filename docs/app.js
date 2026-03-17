@@ -20,6 +20,11 @@ let quillEditor = null;             // Quill rich text editor instance
 
 // ===== API Helpers =====
 async function apiCall(endpoint, options = {}) {
+    // Check if we're in client-only mode
+    if (window.clientMode && !window.clientMode.hasBackend()) {
+        throw new Error('Backend not available - using client-only mode');
+    }
+    
     try {
         const response = await fetch(`/api${endpoint}`, {
             ...options,
@@ -53,7 +58,10 @@ async function apiCall(endpoint, options = {}) {
         }
     } catch (error) {
         console.error('API Error:', error);
-        alert(`Error: ${error.message}`);
+        // Don't alert in client-only mode
+        if (window.clientMode && window.clientMode.hasBackend()) {
+            alert(`Error: ${error.message}`);
+        }
         throw error;
     }
 }
@@ -64,15 +72,26 @@ async function loadProjects() {
     projectList.innerHTML = '<div class="loading">Loading projects...</div>';
     
     try {
-        const data = await apiCall('/projects');
+        let projects = [];
         
-        if (data.projects.length === 0) {
-            projectList.innerHTML = '<div class="loading">No projects found. Create one!</div>';
+        // Try backend first, fall back to client mode
+        if (window.clientMode && !window.clientMode.hasBackend()) {
+            // Client-only mode
+            projects = window.clientMode.getProjects();
+            console.log('Loaded projects from LocalStorage:', projects);
+        } else {
+            // Backend mode
+            const data = await apiCall('/projects');
+            projects = data.projects;
+        }
+        
+        if (projects.length === 0) {
+            projectList.innerHTML = '<div class="loading">No projects found. Upload an Excel file to get started!</div>';
             return;
         }
         
         projectList.innerHTML = '';
-        data.projects.forEach(project => {
+        projects.forEach(project => {
             const item = document.createElement('div');
             item.className = 'project-item';
             item.dataset.projectId = project.id;
@@ -94,18 +113,19 @@ async function loadProjects() {
         if (urlHash && urlHash.startsWith('#project=')) {
             const projectId = urlHash.substring(9); // Remove '#project='
             // Check if project exists
-            const projectExists = data.projects.some(p => p.id === projectId);
+            const projectExists = projects.some(p => p.id === projectId);
             if (projectExists) {
                 projectToSelect = projectId;
             }
         }
         
         // Auto-select project from URL or first project
-        if (data.projects.length > 0 && !currentProject) {
-            selectProject(projectToSelect || data.projects[0].id);
+        if (projects.length > 0 && !currentProject) {
+            selectProject(projectToSelect || projects[0].id);
         }
     } catch (error) {
-        projectList.innerHTML = '<div class="loading">Error loading projects</div>';
+        console.error('Error loading projects:', error);
+        projectList.innerHTML = '<div class="loading">No projects found. Upload an Excel file to get started!</div>';
     }
 }
 
@@ -185,11 +205,23 @@ async function selectProject(projectId) {
 
 async function loadRadar(projectId) {
     try {
-        radarData = await apiCall(`/projects/${projectId}`);
+        // Try backend first, fall back to client mode
+        if (window.clientMode && !window.clientMode.hasBackend()) {
+            // Client-only mode
+            radarData = window.clientMode.getProject(projectId);
+            if (!radarData) {
+                throw new Error('Project not found in LocalStorage');
+            }
+        } else {
+            // Backend mode
+            radarData = await apiCall(`/projects/${projectId}`);
+        }
+        
         renderRadar(radarData);
         updateFormDatalists(radarData);
     } catch (error) {
         console.error('Failed to load radar:', error);
+        alert('Failed to load project: ' + error.message);
     }
 }
 
@@ -1739,4 +1771,16 @@ document.getElementById('file-input').addEventListener('change', (e) => {
     }
 });
 
+// ===== Initialize Client Mode on Page Load =====
+if (window.clientMode) {
+    window.clientMode.initialize().then(() => {
+        console.log('Client mode initialized');
+        // Load projects after initialization
+        loadProjects();
+    });
+} else {
+    // Fallback if client-mode.js not loaded
+    console.warn('Client mode not available, loading projects normally');
+    loadProjects();
+}
 // Made with Bob
