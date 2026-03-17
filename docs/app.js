@@ -442,15 +442,43 @@ async function createProject() {
     }
     
     try {
-        await apiCall('/projects', {
-            method: 'POST',
-            body: JSON.stringify({ name, template: 'default' })
-        });
-        
-        hideNewProjectModal();
-        await loadProjects();
+        // Check if we're in client-only mode
+        if (window.clientMode && !window.clientMode.hasBackend()) {
+            // Client-only mode: create empty project
+            const projectId = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const emptyRadarData = {
+                rings: [
+                    { name: 'Adopt', color: '#93c47d' },
+                    { name: 'Trial', color: '#93d2c2' },
+                    { name: 'Assess', color: '#fbdb84' },
+                    { name: 'Hold', color: '#efafa9' }
+                ],
+                quadrants: [
+                    { name: 'Tools' },
+                    { name: 'Techniques' },
+                    { name: 'Platforms' },
+                    { name: 'Languages' }
+                ],
+                entries: []
+            };
+            
+            window.clientMode.saveProject(projectId, emptyRadarData, name);
+            hideNewProjectModal();
+            await loadProjects();
+            await selectProject(projectId);
+        } else {
+            // Backend mode
+            await apiCall('/projects', {
+                method: 'POST',
+                body: JSON.stringify({ name, template: 'default' })
+            });
+            
+            hideNewProjectModal();
+            await loadProjects();
+        }
     } catch (error) {
         console.error('Failed to create project:', error);
+        alert('Failed to create project: ' + error.message);
     }
 }
 
@@ -1285,40 +1313,74 @@ async function saveEditEntry(event) {
     }
     
     try {
-        let response;
-        const isNewEntry = !currentDetailEntry;
-        
-        if (isNewEntry) {
-            // Creating a new entry - POST to /rows endpoint
-            response = await apiCall(`/projects/${currentProjectId}/rows`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(entryData)
-            });
-        } else {
-            // Updating existing entry - find row index and PUT
-            const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
-            const allRows = excelResponse.rows || [];
+        // Check if we're in client-only mode
+        if (window.clientMode && !window.clientMode.hasBackend()) {
+            // Client-only mode: update LocalStorage
+            const isNewEntry = !currentDetailEntry;
             
-            // Find the row index
-            const rowIndex = allRows.findIndex(row => row.name === currentDetailEntry.name);
-            
-            if (rowIndex === -1) {
-                throw new Error('Entry not found in Excel data');
+            if (isNewEntry) {
+                // Add new entry
+                const newEntry = {
+                    id: radarData.entries.length + 1,
+                    ...entryData,
+                    status: 'new',
+                    strategic: entryData.isStrategic || false
+                };
+                radarData.entries.push(newEntry);
+            } else {
+                // Update existing entry
+                const entryIndex = radarData.entries.findIndex(e => e.name === currentDetailEntry.name);
+                if (entryIndex !== -1) {
+                    radarData.entries[entryIndex] = {
+                        ...radarData.entries[entryIndex],
+                        ...entryData,
+                        strategic: entryData.isStrategic || false
+                    };
+                }
             }
             
-            // Update single row via API
-            response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(entryData)
-            });
-        }
-        
-        // Update radar data from response
-        if (response.radar) {
-            radarData = response.radar;
+            // Save to LocalStorage
+            window.clientMode.saveProject(currentProjectId, radarData, currentProjectId);
+            
+            // Re-render radar
             renderRadar(radarData);
+        } else {
+            // Backend mode
+            let response;
+            const isNewEntry = !currentDetailEntry;
+            
+            if (isNewEntry) {
+                // Creating a new entry - POST to /rows endpoint
+                response = await apiCall(`/projects/${currentProjectId}/rows`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(entryData)
+                });
+            } else {
+                // Updating existing entry - find row index and PUT
+                const excelResponse = await apiCall(`/projects/${currentProjectId}/excel`);
+                const allRows = excelResponse.rows || [];
+                
+                // Find the row index
+                const rowIndex = allRows.findIndex(row => row.name === currentDetailEntry.name);
+                
+                if (rowIndex === -1) {
+                    throw new Error('Entry not found in Excel data');
+                }
+                
+                // Update single row via API
+                response = await apiCall(`/projects/${currentProjectId}/rows/${rowIndex}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(entryData)
+                });
+            }
+            
+            // Update radar data from response
+            if (response.radar) {
+                radarData = response.radar;
+                renderRadar(radarData);
+            }
         }
         
         // Find the updated entry in the new radar data
@@ -1505,9 +1567,16 @@ async function deleteProject() {
     }
     
     try {
-        await apiCall(`/projects/${currentProject}`, {
-            method: 'DELETE'
-        });
+        // Check if we're in client-only mode
+        if (window.clientMode && !window.clientMode.hasBackend()) {
+            // Client-only mode: delete from LocalStorage
+            window.clientMode.deleteProject(currentProject);
+        } else {
+            // Backend mode
+            await apiCall(`/projects/${currentProject}`, {
+                method: 'DELETE'
+            });
+        }
         
         // Clear current project
         currentProject = null;
