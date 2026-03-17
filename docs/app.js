@@ -444,22 +444,32 @@ async function createProject() {
     try {
         // Check if we're in client-only mode
         if (window.clientMode && !window.clientMode.hasBackend()) {
-            // Client-only mode: create empty project
+            // Client-only mode: create empty project with config from config.yml
             const projectId = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const emptyRadarData = {
                 rings: [
-                    { name: 'Adopt', color: '#93c47d' },
-                    { name: 'Trial', color: '#93d2c2' },
-                    { name: 'Assess', color: '#fbdb84' },
-                    { name: 'Hold', color: '#efafa9' }
+                    { name: 'Q1', color: '#4CAF50' },
+                    { name: 'Q2', color: '#2196F3' },
+                    { name: 'Q3', color: '#FF9800' },
+                    { name: 'Q4', color: '#9E9E9E' },
+                    { name: 'Beyond', color: '#000000' }
                 ],
                 quadrants: [
-                    { name: 'Tools' },
-                    { name: 'Techniques' },
-                    { name: 'Platforms' },
-                    { name: 'Languages' }
+                    { name: 'Infrastructure' },
+                    { name: 'Applications' },
+                    { name: 'Services' },
+                    { name: 'Emerging Tech' }
                 ],
-                entries: []
+                entries: [],
+                layout: {
+                    startAngleDeg: 0,
+                    padding: 20,
+                    jitter: 0.85,
+                    minRadius: 80,
+                    maxRadius: 400,
+                    dotMinSize: 8,
+                    dotMaxSize: 40
+                }
             };
             
             window.clientMode.saveProject(projectId, emptyRadarData, name);
@@ -674,17 +684,24 @@ async function refreshGrid() {
 
 // ===== Dot Size Calculation =====
 function calculateDotSize(entry, layout, allEntries) {
+    // Provide default layout if not available
+    const defaultLayout = {
+        dotMinSize: 8,
+        dotMaxSize: 40
+    };
+    const actualLayout = layout || defaultLayout;
+    
     if (entry.value && entry.value > 0) {
         // Size based on value
         const maxValue = Math.max(...allEntries.map(e => e.value || 0));
         if (maxValue > 0) {
             const normalized = entry.value / maxValue;
-            const size = layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
+            const size = actualLayout.dotMinSize + (actualLayout.dotMaxSize - actualLayout.dotMinSize) * normalized;
             console.log(`Entry: ${entry.name}, value: ${entry.value}, maxValue: ${maxValue}, normalized: ${normalized}, size: ${size}`);
             return size;
         }
     }
-    const defaultSize = (layout.dotMinSize + layout.dotMaxSize) / 2;
+    const defaultSize = (actualLayout.dotMinSize + actualLayout.dotMaxSize) / 2;
     console.log(`Entry: ${entry.name}, no value, using default size: ${defaultSize}`);
     return defaultSize;
 }

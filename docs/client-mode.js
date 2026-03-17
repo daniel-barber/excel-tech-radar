@@ -129,8 +129,8 @@ function transformExcelToRadar(jsonData) {
     const entries = jsonData.map((row, index) => ({
         id: index + 1,
         name: row.name || row.Name || `Entry ${index + 1}`,
-        ring: row.ring || row.Ring || rings[0] || 'Adopt',
-        quadrant: row.quadrant || row.Quadrant || quadrants[0] || 'Tools',
+        ring: row.ring || row.Ring || rings[0] || 'Q1',
+        quadrant: row.quadrant || row.Quadrant || quadrants[0] || 'Infrastructure',
         status: row.status || row.Status || 'new',
         description: row.description || row.Description || '',
         tags: row.tags || row.Tags || '',
@@ -144,12 +144,22 @@ function transformExcelToRadar(jsonData) {
     return {
         rings: rings.map((name, index) => ({ name, color: getDefaultRingColor(index) })),
         quadrants: quadrants.map(name => ({ name })),
-        entries: entries
+        entries: entries,
+        layout: {
+            startAngleDeg: 0,
+            padding: 20,
+            jitter: 0.85,
+            minRadius: 80,
+            maxRadius: 400,
+            dotMinSize: 8,
+            dotMaxSize: 40
+        }
     };
 }
 
 function getDefaultRingColor(index) {
-    const colors = ['#93c47d', '#93d2c2', '#fbdb84', '#efafa9'];
+    // Updated colors to match config.yml: Q1, Q2, Q3, Q4, Beyond
+    const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9E9E9E', '#000000'];
     return colors[index % colors.length];
 }
 
