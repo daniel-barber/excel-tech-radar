@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Radar dish base -->
+  <circle cx="50" cy="50" r="45" fill="#2196F3" opacity="0.1"/>
+  
+  <!-- Radar rings -->
+  <circle cx="50" cy="50" r="35" fill="none" stroke="#2196F3" stroke-width="2" opacity="0.3"/>
+  <circle cx="50" cy="50" r="25" fill="none" stroke="#2196F3" stroke-width="2" opacity="0.5"/>
+  <circle cx="50" cy="50" r="15" fill="none" stroke="#2196F3" stroke-width="2" opacity="0.7"/>
+  
+  <!-- Center dot -->
+  <circle cx="50" cy="50" r="4" fill="#2196F3"/>
+  
+  <!-- Radar sweep line (animated effect) -->
+  <line x1="50" y1="50" x2="50" y2="15" stroke="#4CAF50" stroke-width="3" stroke-linecap="round">
+    <animateTransform
+      attributeName="transform"
+      attributeType="XML"
+      type="rotate"
+      from="0 50 50"
+      to="360 50 50"
+      dur="3s"
+      repeatCount="indefinite"/>
+  </line>
+  
+  <!-- Radar blips -->
+  <circle cx="65" cy="35" r="3" fill="#FF9800" opacity="0.8"/>
+  <circle cx="35" cy="40" r="2.5" fill="#FF9800" opacity="0.6"/>
+  <circle cx="55" cy="60" r="2" fill="#FF9800" opacity="0.4"/>
+</svg>
+
+<!-- Made with Bob -->
