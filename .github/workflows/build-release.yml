@@ -159,27 +159,42 @@ jobs:
           ## Downloads
           
           ### macOS
-          - **RadarStudio-${{ steps.version.outputs.version }}-macOS.dmg** - macOS installer (drag and drop)
+          - **RadarStudio-${{ steps.version.outputs.version }}-macOS.dmg** - macOS installer
           - Requires macOS 10.13 or later
           
           ### Windows
           - **RadarStudio-${{ steps.version.outputs.version }}-Windows.zip** - Windows portable executable
           - Requires Windows 10 or later
-          - Extract and run RadarStudio.exe
           
           ## Installation
           
-          ### macOS
+          ### macOS Installation
+          
           1. Download the DMG file
           2. Open the DMG
-          3. Drag "Radar Studio" to Applications
-          4. Right-click and select "Open" (first time only, due to Gatekeeper)
+          3. Drag "Radar Studio" to Applications folder
+          4. **Important - First Launch:**
+             - **Right-click** on "Radar Studio" in Applications
+             - Select **"Open"** from the menu
+             - Click **"Open"** in the security dialog
+             - This is only needed the first time
           
-          ### Windows
+          **Why this step?** macOS shows a security warning because the app is not signed with an Apple Developer certificate. The app is safe - this is just Apple's way of protecting users from unverified developers.
+          
+          **Alternative method (Terminal):**
+          ```bash
+          xattr -d com.apple.quarantine "/Applications/Radar Studio.app"
+          ```
+          
+          ### Windows Installation
+          
           1. Download the ZIP file
-          2. Extract to a folder
-          3. Run RadarStudio.exe
-          4. Windows Defender may show a warning - click "More info" then "Run anyway"
+          2. Extract to a folder (e.g., `C:\Program Files\RadarStudio`)
+          3. Run `RadarStudio.exe`
+          4. **If Windows Defender shows a warning:**
+             - Click "More info"
+             - Click "Run anyway"
+             - This is normal for unsigned applications
           
           ## Usage
           

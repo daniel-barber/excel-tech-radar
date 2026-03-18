@@ -9,19 +9,32 @@ A production-ready web application for creating and managing interactive technol
 ### macOS
 - **[Download for macOS](https://github.com/yourusername/excel-tech-radar/releases/latest)** (DMG installer)
 - Requirements: macOS 10.13 or later
-- Installation:
-  1. Download the `.dmg` file
-  2. Open the DMG and drag "Excel Tech Radar" to Applications
-  3. Right-click the app and select "Open" (first time only)
+
+**Installation:**
+1. Download the `RadarStudio-X.X.X-macOS.dmg` file
+2. Open the DMG and drag "Radar Studio" to Applications
+3. **Important**: Right-click the app and select "Open" (first time only)
+   - macOS will show a security warning because the app is not signed
+   - This is normal and safe - the app is not from the App Store
+   - After the first time, you can open it normally
+
+**Alternative method (Terminal):**
+```bash
+xattr -d com.apple.quarantine "/Applications/Radar Studio.app"
+```
 
 ### Windows
 - **[Download for Windows](https://github.com/yourusername/excel-tech-radar/releases/latest)** (ZIP archive)
 - Requirements: Windows 10 or later
-- Installation:
-  1. Download the `.zip` file
-  2. Extract to a folder
-  3. Run `ExcelTechRadar.exe`
-  4. If Windows Defender shows a warning, click "More info" then "Run anyway"
+
+**Installation:**
+1. Download the `RadarStudio-X.X.X-Windows.zip` file
+2. Extract to a folder
+3. Run `RadarStudio.exe`
+4. If Windows Defender shows a warning:
+   - Click "More info"
+   - Click "Run anyway"
+   - This is normal for unsigned applications
 
 ### Using the Standalone App
 1. **Launch** the application

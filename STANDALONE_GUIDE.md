@@ -7,22 +7,51 @@ This guide is for users of the standalone Excel Tech Radar application (no Pytho
 ### macOS
 
 1. **Download** the DMG file from [GitHub Releases](https://github.com/yourusername/excel-tech-radar/releases/latest)
+   - Look for `RadarStudio-X.X.X-macOS.dmg`
+
 2. **Open** the downloaded DMG file
-3. **Drag** "Excel Tech Radar" to your Applications folder
-4. **First Launch**: Right-click the app and select "Open" (required due to macOS Gatekeeper)
+
+3. **Drag** "Radar Studio" to your Applications folder
+
+4. **First Launch** (Important!):
+   - **Do not** double-click the app yet
+   - **Right-click** (or Control+click) on "Radar Studio" in Applications
+   - Select **"Open"** from the menu
+   - A dialog will appear - click **"Open"** again
+   - This is only needed the first time
+
 5. **Subsequent Launches**: Double-click the app normally
+
+**Why the extra step?** macOS Gatekeeper shows a security warning because the app is not signed with an Apple Developer certificate ($99/year). The app is completely safe - this is just Apple's way of protecting users from unverified developers.
+
+**Alternative method (Terminal):**
+```bash
+xattr -d com.apple.quarantine "/Applications/Radar Studio.app"
+```
 
 **System Requirements**: macOS 10.13 (High Sierra) or later
 
 ### Windows
 
 1. **Download** the ZIP file from [GitHub Releases](https://github.com/yourusername/excel-tech-radar/releases/latest)
-2. **Extract** the ZIP file to a folder (e.g., `C:\Program Files\ExcelTechRadar`)
-3. **Run** `ExcelTechRadar.exe`
-4. **First Launch**: If Windows Defender shows a warning:
-   - Click "More info"
-   - Click "Run anyway"
+   - Look for `RadarStudio-X.X.X-Windows.zip`
+
+2. **Extract** the ZIP file to a folder
+   - Recommended: `C:\Program Files\RadarStudio`
+   - Or: `C:\Users\YourName\Documents\RadarStudio`
+
+3. **Run** `RadarStudio.exe`
+
+4. **First Launch** - If Windows Defender shows a warning:
+   - Click **"More info"**
+   - Click **"Run anyway"**
+   - This is normal for unsigned applications
+   - The app is safe - Windows just doesn't recognize the publisher
+
 5. **Optional**: Create a desktop shortcut for easy access
+   - Right-click `RadarStudio.exe`
+   - Select "Create shortcut"
+   - Drag shortcut to Desktop
 
 **System Requirements**: Windows 10 or later
 
