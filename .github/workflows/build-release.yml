@@ -42,12 +42,12 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
           fi
           
-          DMG_NAME="ExcelTechRadar-${VERSION}-macOS.dmg"
+          DMG_NAME="RadarStudio-${VERSION}-macOS.dmg"
           
           mkdir -p dist/dmg
-          cp -r "dist/Excel Tech Radar.app" dist/dmg/
+          cp -r "dist/Radar Studio.app" dist/dmg/
           
-          hdiutil create -volname "Excel Tech Radar" \
+          hdiutil create -volname "Radar Studio" \
                          -srcfolder dist/dmg \
                          -ov -format UDZO \
                          "dist/$DMG_NAME"
@@ -63,7 +63,7 @@ jobs:
           name: macos-build
           path: |
             dist/*.dmg
-            dist/Excel Tech Radar.app
+            dist/Radar Studio.app
           retention-days: 30
       
       - name: Upload DMG to release
@@ -106,9 +106,9 @@ jobs:
             $VERSION = "${{ github.event.inputs.version }}"
           }
           
-          $ZIP_NAME = "ExcelTechRadar-$VERSION-Windows.zip"
+          $ZIP_NAME = "RadarStudio-$VERSION-Windows.zip"
           
-          Compress-Archive -Path "dist\ExcelTechRadar.exe", "README.md" -DestinationPath "dist\$ZIP_NAME"
+          Compress-Archive -Path "dist\RadarStudio.exe", "README.md" -DestinationPath "dist\$ZIP_NAME"
           
           echo "ZIP_PATH=dist\$ZIP_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "ZIP_NAME=$ZIP_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -154,31 +154,31 @@ jobs:
       - name: Create release notes
         run: |
           cat > release-notes.md << 'EOF'
-          # Excel Tech Radar v${{ steps.version.outputs.version }}
+          # Radar Studio v${{ steps.version.outputs.version }}
           
           ## Downloads
           
           ### macOS
-          - **ExcelTechRadar-${{ steps.version.outputs.version }}-macOS.dmg** - macOS installer (drag and drop)
+          - **RadarStudio-${{ steps.version.outputs.version }}-macOS.dmg** - macOS installer (drag and drop)
           - Requires macOS 10.13 or later
           
           ### Windows
-          - **ExcelTechRadar-${{ steps.version.outputs.version }}-Windows.zip** - Windows portable executable
+          - **RadarStudio-${{ steps.version.outputs.version }}-Windows.zip** - Windows portable executable
           - Requires Windows 10 or later
-          - Extract and run ExcelTechRadar.exe
+          - Extract and run RadarStudio.exe
           
           ## Installation
           
           ### macOS
           1. Download the DMG file
           2. Open the DMG
-          3. Drag "Excel Tech Radar" to Applications
+          3. Drag "Radar Studio" to Applications
           4. Right-click and select "Open" (first time only, due to Gatekeeper)
           
           ### Windows
           1. Download the ZIP file
           2. Extract to a folder
-          3. Run ExcelTechRadar.exe
+          3. Run RadarStudio.exe
           4. Windows Defender may show a warning - click "More info" then "Run anyway"
           
           ## Usage
