@@ -858,11 +858,11 @@ function renderRadar(data, searchTerm = '') {
         const x = Math.cos(angle) * ringRadius;
         const y = Math.sin(angle) * ringRadius;
         
-        const ring = data.rings[ringIndex];
+        const ringObj = data.rings[ringIndex];
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
         // Get color from propensityToWin, fallback to ring color
-        let dotColor = ring.color;
+        let dotColor = ringObj.color;
         if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
             const propensity = data.propensityToWin.find(p => {
                 return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
@@ -872,7 +872,7 @@ function renderRadar(data, searchTerm = '') {
             }
         }
         
-        return { ...entry, x, y, dotSize, dotColor, ring };
+        return { ...entry, x, y, dotSize, dotColor };
     });
     
     // Sort entries by size (largest first) so smaller items render on top
