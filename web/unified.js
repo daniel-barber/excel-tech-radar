@@ -717,13 +717,78 @@ function renderRadar(data, searchTerm = '') {
             .join(' ');
     }
     
-    // Draw rings
+    // Calculate ring radii with smart proportional spacing
     const maxRadius = Math.min(width, height) / 2 - 100;
-    const ringCount = data.rings.length;
-    const ringStep = maxRadius / ringCount;
+    const minRadius = 60; // Start radius
+    const minRingWidth = 50; // Minimum width for any ring (ensures visibility)
+    const labelSpacing = 25; // Space needed for labels
     
+    // Count items per ring
+    const itemsPerRing = data.rings.map(ring => {
+        return data.entries.filter(e => e.ring === ring.id).length;
+    });
+    
+    // Calculate total items
+    const totalItems = itemsPerRing.reduce((sum, count) => sum + count, 0);
+    
+    // Calculate proportional widths with minimum constraints
+    const availableSpace = maxRadius - minRadius;
+    const ringWidths = [];
+    
+    if (totalItems === 0) {
+        // No items, use equal spacing
+        const equalWidth = availableSpace / data.rings.length;
+        data.rings.forEach(() => ringWidths.push(equalWidth));
+    } else {
+        // Calculate ideal proportional widths
+        const idealWidths = itemsPerRing.map(count => {
+            const proportion = count / totalItems;
+            return Math.max(minRingWidth, availableSpace * proportion);
+        });
+        
+        // Check if total exceeds available space
+        const totalIdealWidth = idealWidths.reduce((sum, w) => sum + w, 0);
+        
+        if (totalIdealWidth > availableSpace) {
+            // Scale down proportionally while maintaining minimums
+            const excessWidth = totalIdealWidth - availableSpace;
+            const scalableWidths = idealWidths.map(w => Math.max(0, w - minRingWidth));
+            const totalScalable = scalableWidths.reduce((sum, w) => sum + w, 0);
+            
+            if (totalScalable > 0) {
+                // Reduce scalable portions proportionally
+                idealWidths.forEach((width, i) => {
+                    const scalable = scalableWidths[i];
+                    const reduction = (scalable / totalScalable) * excessWidth;
+                    ringWidths.push(Math.max(minRingWidth, width - reduction));
+                });
+            } else {
+                // All at minimum, distribute equally
+                const equalWidth = availableSpace / data.rings.length;
+                data.rings.forEach(() => ringWidths.push(equalWidth));
+            }
+        } else {
+            // Fits comfortably, use ideal widths
+            ringWidths.push(...idealWidths);
+        }
+    }
+    
+    // Calculate cumulative radii
+    const ringRadii = [];
+    let currentRadius = minRadius;
+    ringWidths.forEach(width => {
+        currentRadius += width;
+        ringRadii.push(currentRadius);
+    });
+    
+    console.log('Smart ring sizing:');
+    console.log('  Items per ring:', itemsPerRing);
+    console.log('  Ring widths:', ringWidths.map(w => Math.round(w)));
+    console.log('  Ring radii:', ringRadii.map(r => Math.round(r)));
+    
+    // Draw rings
     data.rings.forEach((ring, i) => {
-        const radius = (i + 1) * ringStep;
+        const radius = ringRadii[i];
         g.append('circle')
             .attr('class', 'ring-circle')
             .attr('r', radius);
@@ -775,48 +840,58 @@ function renderRadar(data, searchTerm = '') {
           })
         : data.entries;
     
-    // Draw entries
-    filteredEntries.forEach(entry => {
+    // Prepare entries with calculated positions and sizes
+    const entriesWithPositions = filteredEntries.map(entry => {
         const ringIndex = data.rings.findIndex(r => r.id === entry.ring);
         const quadrantIndex = data.quadrants.findIndex(q => q.id === entry.quadrant);
         
-        const ringRadius = ((ringIndex + 0.5) * ringStep) + (Math.random() - 0.5) * ringStep * 0.6;
+        // Calculate position within the ring
+        const innerRadius = ringIndex === 0 ? minRadius : ringRadii[ringIndex - 1];
+        const outerRadius = ringRadii[ringIndex];
+        const ringWidth = outerRadius - innerRadius;
+        const ringCenter = innerRadius + ringWidth / 2;
+        
+        // Add jitter within the ring
+        const ringRadius = ringCenter + (Math.random() - 0.5) * ringWidth * 0.6;
         const angle = (quadrantIndex * angleStep) + (Math.random() * angleStep);
         
         const x = Math.cos(angle) * ringRadius;
         const y = Math.sin(angle) * ringRadius;
         
         const ring = data.rings[ringIndex];
-        
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
         // Get color from propensityToWin, fallback to ring color
-        let dotColor = ring.color;  // Default to ring color
+        let dotColor = ring.color;
         if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
             const propensity = data.propensityToWin.find(p => {
-                // Match by name or id
                 return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
             });
             if (propensity && propensity.color) {
                 dotColor = propensity.color;
-                console.log(`Entry ${entry.name}: Using propensity color ${dotColor} for ${entry.propensityToWin}`);
-            } else {
-                console.log(`Entry ${entry.name}: Propensity ${entry.propensityToWin} not found in config`, data.propensityToWin);
             }
         }
         
+        return { ...entry, x, y, dotSize, dotColor, ring };
+    });
+    
+    // Sort entries by size (largest first) so smaller items render on top
+    entriesWithPositions.sort((a, b) => b.dotSize - a.dotSize);
+    
+    // Draw entries
+    entriesWithPositions.forEach(entry => {
         g.append('circle')
             .attr('class', 'radar-dot')
             .attr('data-entry-id', entry.id)
             .attr('data-entry-name', entry.name)
-            .attr('cx', x)
-            .attr('cy', y)
-            .attr('r', dotSize)
-            .attr('fill', dotColor)
+            .attr('cx', entry.x)
+            .attr('cy', entry.y)
+            .attr('r', entry.dotSize)
+            .attr('fill', entry.dotColor)
             .attr('stroke', 'none')
             .style('cursor', 'pointer')
             .on('click', (event) => {
-                event.stopPropagation();  // Prevent background click
+                event.stopPropagation();
                 showDetail(entry);
             });
         
@@ -825,9 +900,9 @@ function renderRadar(data, searchTerm = '') {
             g.append('circle')
                 .attr('class', 'radar-dot-strategic')
                 .attr('data-entry-name', entry.name)  // Link to parent entry
-                .attr('cx', x)
-                .attr('cy', y)
-                .attr('r', dotSize * 0.35)  // 35% of main dot size
+                .attr('cx', entry.x)
+                .attr('cy', entry.y)
+                .attr('r', entry.dotSize * 0.35)  // 35% of main dot size
                 .attr('fill', '#1565C0')  // Dark blue
                 .style('pointer-events', 'none');  // Don't interfere with click events
         }
@@ -835,8 +910,8 @@ function renderRadar(data, searchTerm = '') {
         g.append('text')
             .attr('class', 'radar-label')
             .attr('data-entry-id', entry.id)
-            .attr('x', x)
-            .attr('y', y + dotSize + 10)
+            .attr('x', entry.x)
+            .attr('y', entry.y + entry.dotSize + 10)
             .attr('text-anchor', 'middle')
             .text(entry.name);
     });

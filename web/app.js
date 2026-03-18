@@ -127,12 +127,70 @@ function renderRadar() {
     const layout = radarData.layout;
     const minRadius = layout.minRadius;
     const maxRadius = Math.min(width, height) / 2 - 80;
+    const minRingWidth = 50; // Minimum width for any ring (ensures visibility)
     
-    // Calculate ring radii
-    const ringCount = radarData.rings.length;
-    const ringRadii = radarData.rings.map((ring, i) => {
-        return minRadius + (maxRadius - minRadius) * (i + 1) / ringCount;
+    // Count items per ring
+    const itemsPerRing = radarData.rings.map(ring => {
+        return radarData.entries.filter(e => e.ring === ring.id).length;
     });
+    
+    // Calculate total items
+    const totalItems = itemsPerRing.reduce((sum, count) => sum + count, 0);
+    
+    // Calculate proportional widths with minimum constraints
+    const availableSpace = maxRadius - minRadius;
+    const ringWidths = [];
+    
+    if (totalItems === 0) {
+        // No items, use equal spacing
+        const equalWidth = availableSpace / radarData.rings.length;
+        radarData.rings.forEach(() => ringWidths.push(equalWidth));
+    } else {
+        // Calculate ideal proportional widths
+        const idealWidths = itemsPerRing.map(count => {
+            const proportion = count / totalItems;
+            return Math.max(minRingWidth, availableSpace * proportion);
+        });
+        
+        // Check if total exceeds available space
+        const totalIdealWidth = idealWidths.reduce((sum, w) => sum + w, 0);
+        
+        if (totalIdealWidth > availableSpace) {
+            // Scale down proportionally while maintaining minimums
+            const excessWidth = totalIdealWidth - availableSpace;
+            const scalableWidths = idealWidths.map(w => Math.max(0, w - minRingWidth));
+            const totalScalable = scalableWidths.reduce((sum, w) => sum + w, 0);
+            
+            if (totalScalable > 0) {
+                // Reduce scalable portions proportionally
+                idealWidths.forEach((width, i) => {
+                    const scalable = scalableWidths[i];
+                    const reduction = (scalable / totalScalable) * excessWidth;
+                    ringWidths.push(Math.max(minRingWidth, width - reduction));
+                });
+            } else {
+                // All at minimum, distribute equally
+                const equalWidth = availableSpace / radarData.rings.length;
+                radarData.rings.forEach(() => ringWidths.push(equalWidth));
+            }
+        } else {
+            // Fits comfortably, use ideal widths
+            ringWidths.push(...idealWidths);
+        }
+    }
+    
+    // Calculate cumulative radii
+    const ringRadii = [];
+    let currentRadius = minRadius;
+    ringWidths.forEach(width => {
+        currentRadius += width;
+        ringRadii.push(currentRadius);
+    });
+    
+    console.log('Smart ring sizing:');
+    console.log('  Items per ring:', itemsPerRing);
+    console.log('  Ring widths:', ringWidths.map(w => Math.round(w)));
+    console.log('  Ring radii:', ringRadii.map(r => Math.round(r)));
     
     // Clear existing content
     const g = svg.select('#radar-group');
@@ -245,9 +303,16 @@ function renderRadar() {
         minRadius,
     });
     
+    // Sort entries by size (largest first) so smaller items render on top
+    const sortedEntries = [...positionedEntries].sort((a, b) => {
+        const sizeA = calculateDotSize(a, layout);
+        const sizeB = calculateDotSize(b, layout);
+        return sizeB - sizeA;
+    });
+    
     // Draw entries (dots)
     const dots = g.selectAll('.radar-dot')
-        .data(positionedEntries)
+        .data(sortedEntries)
         .enter()
         .append('circle')
         .attr('class', d => {

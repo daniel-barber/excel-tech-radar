@@ -6,6 +6,20 @@ Builds standalone executables for Mac and Windows
 
 import sys
 from pathlib import Path
+import re
+
+# Read version from pyproject.toml
+def get_version():
+    pyproject_path = Path('pyproject.toml')
+    if pyproject_path.exists():
+        content = pyproject_path.read_text()
+        match = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
+        if match:
+            return match.group(1)
+    return '0.1.0'  # Fallback
+
+APP_VERSION = get_version()
+print(f"Building version: {APP_VERSION}")
 
 block_cipher = None
 
@@ -117,8 +131,8 @@ if is_mac:
         info_plist={
             'CFBundleName': 'Radar Studio',
             'CFBundleDisplayName': 'Radar Studio',
-            'CFBundleVersion': '0.1.0',
-            'CFBundleShortVersionString': '0.1.0',
+            'CFBundleVersion': APP_VERSION,
+            'CFBundleShortVersionString': APP_VERSION,
             'NSHighResolutionCapable': True,
             'LSMinimumSystemVersion': '10.13.0',
         },

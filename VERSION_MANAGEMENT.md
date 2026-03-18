@@ -13,19 +13,19 @@ Current version: **0.1.0**
 - `1` = First minor version
 - `0` = No patches yet
 
-## Version Locations
+## Version Location
 
-The version number is stored in two places and must be kept in sync:
+The version number is stored in **ONE place only**:
 
-1. **`pyproject.toml`** (line 7):
-   ```toml
-   version = "0.1.0"
-   ```
+**`pyproject.toml`** (line 7):
+```toml
+version = "0.1.0"
+```
 
-2. **`src/excel_radar/version.py`** (line 3):
-   ```python
-   __version__ = "0.1.0"
-   ```
+All other files automatically read from this single source of truth:
+- `src/excel_radar/version.py` - Reads from pyproject.toml at runtime
+- `excel-radar.spec` - Reads from pyproject.toml during build
+- Build scripts - Read from pyproject.toml
 
 ## When to Increment
 
@@ -62,21 +62,17 @@ Increment for:
 ### Manual Method (Recommended for now)
 
 1. **Decide what to increment** based on your changes
-2. **Update both files**:
-   
-   Edit `pyproject.toml`:
+
+2. **Update version in ONE place** - `pyproject.toml`:
    ```toml
    version = "0.1.1"  # or 0.2.0, or 1.0.0
    ```
    
-   Edit `src/excel_radar/version.py`:
-   ```python
-   __version__ = "0.1.1"  # Must match pyproject.toml
-   ```
+   That's it! All other files read from this automatically.
 
 3. **Commit the version bump**:
    ```bash
-   git add pyproject.toml src/excel_radar/version.py
+   git add pyproject.toml
    git commit -m "Bump version to 0.1.1"
    ```
 
@@ -162,7 +158,7 @@ For larger projects, consider:
 
 ## Best Practices
 
-1. **Always update both files** (pyproject.toml and version.py)
+1. **Update version in ONE place** - only `pyproject.toml`
 2. **Tag every release** in git
 3. **Write meaningful commit messages** for the version bump
 4. **Test before releasing** - build and test the standalone app
