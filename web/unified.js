@@ -53,9 +53,46 @@ async function apiCall(endpoint, options = {}) {
         }
     } catch (error) {
         console.error('API Error:', error);
-        alert(`Error: ${error.message}`);
+        showUserFriendlyError(error.message);
         throw error;
     }
+}
+
+// Show user-friendly error messages
+function showUserFriendlyError(errorMessage) {
+    // Parse common error patterns and provide helpful messages
+    let userMessage = errorMessage;
+    let helpText = '';
+    
+    // Check for ring validation errors
+    if (errorMessage.includes('Unknown ring')) {
+        const match = errorMessage.match(/Unknown ring '([^']+)'\. Valid rings: \[([^\]]+)\]/);
+        if (match) {
+            const invalidRing = match[1];
+            const validRings = match[2].replace(/'/g, '').split(', ');
+            
+            userMessage = `Invalid ring value: "${invalidRing}"`;
+            helpText = `\n\nValid ring values are:\n${validRings.map(r => `  • ${r}`).join('\n')}\n\nPlease update your Excel file to use one of these ring values.`;
+        }
+    }
+    // Check for quadrant validation errors
+    else if (errorMessage.includes('Unknown quadrant')) {
+        const match = errorMessage.match(/Unknown quadrant '([^']+)'\. Valid quadrants: \[([^\]]+)\]/);
+        if (match) {
+            const invalidQuadrant = match[1];
+            const validQuadrants = match[2].replace(/'/g, '').split(', ');
+            
+            userMessage = `Invalid quadrant value: "${invalidQuadrant}"`;
+            helpText = `\n\nValid quadrant values are:\n${validQuadrants.map(q => `  • ${q}`).join('\n')}\n\nPlease update your Excel file to use one of these quadrant values.`;
+        }
+    }
+    // Check for missing columns
+    else if (errorMessage.includes('Missing required columns')) {
+        userMessage = 'Excel file is missing required columns';
+        helpText = '\n\nYour Excel file must have these columns:\n  • name\n  • ring\n  • quadrant\n\nPlease add these columns to your Excel file.';
+    }
+    
+    alert(userMessage + helpText);
 }
 
 // ===== Project Management =====
@@ -614,18 +651,33 @@ async function refreshGrid() {
 
 // ===== Dot Size Calculation =====
 function calculateDotSize(entry, layout, allEntries) {
+    // Check if entry has a value
     if (entry.value && entry.value > 0) {
-        // Size based on value
-        const maxValue = Math.max(...allEntries.map(e => e.value || 0));
-        if (maxValue > 0) {
-            const normalized = entry.value / maxValue;
-            const size = layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
-            console.log(`Entry: ${entry.name}, value: ${entry.value}, maxValue: ${maxValue}, normalized: ${normalized}, size: ${size}`);
-            return size;
+        // Get all entries with values
+        const entriesWithValues = allEntries.filter(e => e.value && e.value > 0);
+        
+        if (entriesWithValues.length > 0) {
+            const maxValue = Math.max(...entriesWithValues.map(e => e.value));
+            const minValue = Math.min(...entriesWithValues.map(e => e.value));
+            
+            if (maxValue > minValue) {
+                // Normalize between min and max values
+                const normalized = (entry.value - minValue) / (maxValue - minValue);
+                const size = layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
+                console.log(`Entry: ${entry.name}, value: ${entry.value}, min: ${minValue}, max: ${maxValue}, normalized: ${normalized}, size: ${size}`);
+                return size;
+            } else {
+                // All values are the same, use middle size
+                const size = (layout.dotMinSize + layout.dotMaxSize) / 2;
+                console.log(`Entry: ${entry.name}, all values equal (${entry.value}), using middle size: ${size}`);
+                return size;
+            }
         }
     }
+    
+    // No value or no entries with values - use default size
     const defaultSize = (layout.dotMinSize + layout.dotMaxSize) / 2;
-    console.log(`Entry: ${entry.name}, no value, using default size: ${defaultSize}`);
+    console.log(`Entry: ${entry.name}, no value (value: ${entry.value}), using default size: ${defaultSize}`);
     return defaultSize;
 }
 
@@ -738,12 +790,18 @@ function renderRadar(data, searchTerm = '') {
         
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, fallback to blue
-        let dotColor = '#2196F3';  // Default blue color
-        if (entry.propensityToWin && data.propensityToWin) {
-            const propensity = data.propensityToWin.find(p => p.name === entry.propensityToWin);
+        // Get color from propensityToWin, fallback to ring color
+        let dotColor = ring.color;  // Default to ring color
+        if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
+            const propensity = data.propensityToWin.find(p => {
+                // Match by name or id
+                return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
+            });
             if (propensity && propensity.color) {
                 dotColor = propensity.color;
+                console.log(`Entry ${entry.name}: Using propensity color ${dotColor} for ${entry.propensityToWin}`);
+            } else {
+                console.log(`Entry ${entry.name}: Propensity ${entry.propensityToWin} not found in config`, data.propensityToWin);
             }
         }
         

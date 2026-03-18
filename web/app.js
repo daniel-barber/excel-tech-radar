@@ -379,12 +379,27 @@ function applyForceLayout(dots, labels, entries, config) {
 
 // ===== Dot Size Calculation =====
 function calculateDotSize(entry, layout) {
+    // Check if entry has a value
     if (entry.value && entry.value > 0) {
-        // Size based on value
-        const maxValue = Math.max(...radarData.entries.map(e => e.value || 0));
-        const normalized = entry.value / maxValue;
-        return layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
+        // Get all entries with values
+        const entriesWithValues = radarData.entries.filter(e => e.value && e.value > 0);
+        
+        if (entriesWithValues.length > 0) {
+            const maxValue = Math.max(...entriesWithValues.map(e => e.value));
+            const minValue = Math.min(...entriesWithValues.map(e => e.value));
+            
+            if (maxValue > minValue) {
+                // Normalize between min and max values
+                const normalized = (entry.value - minValue) / (maxValue - minValue);
+                return layout.dotMinSize + (layout.dotMaxSize - layout.dotMinSize) * normalized;
+            } else {
+                // All values are the same, use middle size
+                return (layout.dotMinSize + layout.dotMaxSize) / 2;
+            }
+        }
     }
+    
+    // No value or no entries with values - use default size
     return (layout.dotMinSize + layout.dotMaxSize) / 2;
 }
 

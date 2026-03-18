@@ -1103,6 +1103,30 @@ class RadarAPI:
                 return jsonify({'error': 'Web files not found'}), 500
             return send_from_directory(str(web_dir), 'unified.html')
         
+        @self.app.route('/shutdown', methods=['POST'])
+        def shutdown():
+            """Shutdown the Flask server (for standalone launcher only)."""
+            # Only allow shutdown in debug mode (standalone launcher)
+            if not self.config.debug:
+                return jsonify({'error': 'Shutdown not allowed in production mode'}), 403
+            
+            try:
+                # Shutdown the Flask server
+                func = request.environ.get('werkzeug.server.shutdown')
+                if func is None:
+                    # For newer versions of Werkzeug, we need to use a different approach
+                    import os
+                    import signal
+                    os.kill(os.getpid(), signal.SIGINT)
+                else:
+                    func()
+                
+                self.logger.info("Server shutdown requested")
+                return jsonify({'message': 'Server shutting down...'}), 200
+            except Exception as e:
+                self.logger.error(f"Error during shutdown: {e}")
+                return jsonify({'error': str(e)}), 500
+        
         @self.app.route('/<path:path>')
         def static_files(path):
             """Serve static files from web/ or dist/."""

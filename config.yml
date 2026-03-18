@@ -3,35 +3,29 @@ subtitle: "Q1 2026"
 
 # Time-based rings (innermost to outermost)
 rings:
-  - id: q1
-    name: "Q1"
+  - id: current-hy
+    name: "Current HY"
     order: 0
     color: "#4CAF50"  # Green
-    description: "Quarter 1"
+    description: "Current Half Year"
   
-  - id: q2
-    name: "Q2"
+  - id: next-hy
+    name: "Next HY"
     order: 1
     color: "#2196F3"  # Blue
-    description: "Quarter 2"
+    description: "Next Half Year"
   
-  - id: q3
-    name: "Q3"
+  - id: year-plus-1
+    name: "Year +1"
     order: 2
     color: "#FF9800"  # Orange
-    description: "Quarter 3"
+    description: "One year out"
   
-  - id: q4
-    name: "Q4"
+  - id: year-plus-2
+    name: "Year +2"
     order: 3
     color: "#9E9E9E"  # Gray
-    description: "Quarter 4"
-
-  - id: beyond
-    name: "Beyond"
-    order: 4
-    color: "#000000"  # Black
-    description: "Future opportunities beyond this year"
+    description: "Two years out"
 
 # Quadrants (customize these for your use case)
 # Examples: Customer segments, Solution types, Business units, Regions

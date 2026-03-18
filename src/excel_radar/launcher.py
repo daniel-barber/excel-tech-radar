@@ -193,6 +193,14 @@ class RadarLauncher:
     
     def select_directory(self):
         """Open directory selection dialog."""
+        # Prevent changing directory while server is running
+        if self.server_running:
+            messagebox.showwarning(
+                "Server Running",
+                "Please stop the server before selecting a different directory."
+            )
+            return
+        
         initial_dir = self.selected_directory if self.selected_directory else Path.home()
         
         directory = filedialog.askdirectory(
@@ -326,12 +334,26 @@ class RadarLauncher:
             return
         
         try:
-            # Note: Stopping Flask server from another thread is tricky
-            # For now, we'll just update the UI and inform the user
+            # Send shutdown request to Flask server
+            import requests
+            try:
+                requests.post('http://localhost:8080/shutdown', timeout=2)
+            except:
+                pass  # Server might already be down
+            
+            # Update UI state
+            self.server_running = False
+            self.status_label.config(
+                text="Server stopped. You can now select a different directory.",
+                fg="#666"
+            )
+            self.launch_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+            
             messagebox.showinfo(
-                "Stop Server",
-                "To stop the server, please close this application.\n"
-                "The server will stop automatically."
+                "Server Stopped",
+                "The server has been stopped.\n"
+                "You can now select a different directory and launch again."
             )
         except Exception as e:
             messagebox.showerror("Error", f"Failed to stop server:\n{str(e)}")

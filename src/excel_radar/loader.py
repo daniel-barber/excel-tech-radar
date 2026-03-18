@@ -1,5 +1,6 @@
 """Excel file loading and validation using pandas and pydantic."""
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -7,6 +8,26 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import yaml
 from pydantic import BaseModel, Field, field_validator
+
+
+def get_bundled_config_path() -> Optional[Path]:
+    """
+    Get path to bundled config.yml file.
+    Works for both development and PyInstaller builds.
+    
+    Returns:
+        Path to config.yml if found, None otherwise
+    """
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # Running in PyInstaller bundle
+        base_path = Path(sys._MEIPASS)
+    else:
+        # Running in development
+        base_path = Path(__file__).parent.parent.parent
+    
+    config_path = base_path / "config.yml"
+    return config_path if config_path.exists() else None
 
 
 class RingConfig(BaseModel):
@@ -242,8 +263,20 @@ def auto_discover_config(
     config_propensitytowin = []
     
     if config_path is None:
-        # Look for config.yml in project root (2 levels up from data/)
-        config_path = excel_path.parent.parent / "config.yml"
+        # Try multiple locations for config.yml in priority order:
+        # 1. Bundled config (for standalone builds)
+        bundled_config = get_bundled_config_path()
+        if bundled_config:
+            config_path = bundled_config
+            print(f"Using bundled config from: {config_path}")
+        # 2. Same directory as Excel file (for user overrides)
+        elif (excel_path.parent / "config.yml").exists():
+            config_path = excel_path.parent / "config.yml"
+            print(f"Using user config from: {config_path}")
+        # 3. Project root (2 levels up from data/ - for development)
+        elif (excel_path.parent.parent / "config.yml").exists():
+            config_path = excel_path.parent.parent / "config.yml"
+            print(f"Using project config from: {config_path}")
     
     if config_path and config_path.exists():
         try:
