@@ -18,7 +18,7 @@ class TestCleanText:
         assert clean_text("\n\thello\n\t") == "hello"
 
     def test_smart_quotes(self):
-        assert clean_text(""hello"") == '"hello"'
+        assert clean_text('"hello"') == '"hello"'
         assert clean_text("'hello'") == "'hello'"
 
     def test_collapse_spaces(self):
