@@ -1117,7 +1117,14 @@ function renderRadar(data, searchTerm = '') {
             });
         
         // Add strategic indicator (white star cutout in center)
-        if (entry.isStrategic) {
+        // Handle both boolean and string values
+        const isStrategic = entry.isStrategic === true ||
+                           entry.isStrategic === 'true' ||
+                           entry.isStrategic === 'TRUE' ||
+                           entry.isStrategic === 1 ||
+                           entry.isStrategic === '1';
+        
+        if (isStrategic) {
             const starSize = entry.dotSize * 0.5;  // 50% of main dot size
             const starPath = createStarPath(entry.x, entry.y, starSize);
             
@@ -1440,9 +1447,13 @@ function showEditEntryForm() {
     }
     document.getElementById('edit-tags').value = tagsValue;
     
-    // Set strategic checkbox
+    // Set strategic checkbox - handle various truthy values from Excel
     const strategicCheckbox = document.getElementById('edit-strategic');
-    strategicCheckbox.checked = currentDetailEntry.isStrategic === true;
+    strategicCheckbox.checked = currentDetailEntry.isStrategic === true ||
+                                currentDetailEntry.isStrategic === 'true' ||
+                                currentDetailEntry.isStrategic === 'TRUE' ||
+                                currentDetailEntry.isStrategic === 1 ||
+                                currentDetailEntry.isStrategic === '1';
     document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
     

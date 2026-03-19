@@ -603,10 +603,17 @@ def load_excel(
             # Handle boolean values directly
             if isinstance(strategic_val, bool):
                 isStrategic = strategic_val
+            elif isinstance(strategic_val, (int, float)):
+                # Handle numeric values (1 = True, 0 = False)
+                isStrategic = bool(strategic_val)
             else:
                 # Handle string representations
                 strategic_str = str(strategic_val).strip().lower()
-                isStrategic = strategic_str in ['true', 'yes', '1', 'x']
+                isStrategic = strategic_str in ['true', 'yes', '1', 'x', 'y']
+            
+            # Debug: print to console if strategic
+            if isStrategic:
+                print(f"DEBUG: Entry '{name}' marked as strategic (value: {strategic_val}, type: {type(strategic_val).__name__})")
         
         # Create entry dict
         entry = {
