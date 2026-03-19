@@ -687,7 +687,8 @@ class RadarAPI:
                 template = data.get('template', 'default')
                 
                 # Sanitize project name for filename (allow alphanumeric, hyphens, and underscores)
-                project_id = project_name.lower().replace(' ', '_')
+                # Preserve case but replace spaces with underscores
+                project_id = project_name.replace(' ', '_')
                 project_id = ''.join(c for c in project_id if c.isalnum() or c in ('_', '-'))
                 
                 excel_file = self.data_dir / f"{project_id}.xlsx"
@@ -1047,8 +1048,7 @@ class RadarAPI:
         def download_template():
             """Download Excel template for importing projects."""
             try:
-                template_dir = Path(__file__).parent.parent.parent / 'templates'
-                template_file = template_dir / 'radar_template.xlsx'
+                template_file = get_resource_path('templates/radar_template.xlsx')
                 
                 if not template_file.exists():
                     return jsonify({'error': 'Template file not found'}), 404

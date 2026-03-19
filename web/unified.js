@@ -824,60 +824,71 @@ function renderRadar(data, searchTerm = '') {
             .join(' ');
     }
     
-    // Calculate ring radii with smart proportional spacing
+    // Calculate ring radii with smart proportional spacing based on density
     const maxRadius = Math.min(width, height) / 2 - 100;
     const minRadius = 60; // Start radius
-    const minRingWidth = 50; // Minimum width for any ring (ensures visibility)
+    const baseRingWidth = 100; // Base width for rings
     const labelSpacing = 25; // Space needed for labels
     
-    // Count items per ring
+    // Count items per ring and per quadrant in each ring
     const itemsPerRing = data.rings.map(ring => {
         return data.entries.filter(e => e.ring === ring.id).length;
     });
     
-    // Calculate total items
-    const totalItems = itemsPerRing.reduce((sum, count) => sum + count, 0);
-    
-    // Calculate proportional widths with minimum constraints
-    const availableSpace = maxRadius - minRadius;
-    const ringWidths = [];
-    
-    if (totalItems === 0) {
-        // No items, use equal spacing
-        const equalWidth = availableSpace / data.rings.length;
-        data.rings.forEach(() => ringWidths.push(equalWidth));
-    } else {
-        // Calculate ideal proportional widths
-        const idealWidths = itemsPerRing.map(count => {
-            const proportion = count / totalItems;
-            return Math.max(minRingWidth, availableSpace * proportion);
+    const itemsPerRingQuadrant = data.rings.map((ring, ringIndex) => {
+        // Count max items in any quadrant for this ring
+        const quadrantCounts = data.quadrants.map(quad => {
+            return data.entries.filter(e => e.ring === ring.id && e.quadrant === quad.id).length;
         });
+        return Math.max(...quadrantCounts, 0);
+    });
+    
+    // Calculate required width for each ring based on maximum quadrant density
+    const requiredWidths = itemsPerRingQuadrant.map((maxQuadrantCount, ringIndex) => {
+        if (maxQuadrantCount === 0) return baseRingWidth;
         
-        // Check if total exceeds available space
-        const totalIdealWidth = idealWidths.reduce((sum, w) => sum + w, 0);
-        
-        if (totalIdealWidth > availableSpace) {
-            // Scale down proportionally while maintaining minimums
-            const excessWidth = totalIdealWidth - availableSpace;
-            const scalableWidths = idealWidths.map(w => Math.max(0, w - minRingWidth));
-            const totalScalable = scalableWidths.reduce((sum, w) => sum + w, 0);
-            
-            if (totalScalable > 0) {
-                // Reduce scalable portions proportionally
-                idealWidths.forEach((width, i) => {
-                    const scalable = scalableWidths[i];
-                    const reduction = (scalable / totalScalable) * excessWidth;
-                    ringWidths.push(Math.max(minRingWidth, width - reduction));
-                });
-            } else {
-                // All at minimum, distribute equally
-                const equalWidth = availableSpace / data.rings.length;
-                data.rings.forEach(() => ringWidths.push(equalWidth));
-            }
-        } else {
-            // Fits comfortably, use ideal widths
-            ringWidths.push(...idealWidths);
+        // Calculate current ring's mid-radius to estimate arc length
+        let currentMidRadius = minRadius;
+        for (let i = 0; i < ringIndex; i++) {
+            currentMidRadius += baseRingWidth; // Estimate using base width
         }
+        currentMidRadius += baseRingWidth / 2;
+        
+        // Calculate arc length available in one quadrant
+        const quadrantArcLength = (2 * Math.PI * currentMidRadius) / data.quadrants.length;
+        
+        // Space needed per item (dot + label + spacing)
+        const avgDotSize = 10;
+        const itemSpacing = 28; // Total space per item
+        const requiredSpace = maxQuadrantCount * itemSpacing;
+        
+        // If items don't fit, we need a wider ring (larger radius = more arc length)
+        if (requiredSpace > quadrantArcLength * 0.7) {
+            // Calculate how much wider the ring needs to be
+            const requiredArcLength = requiredSpace / 0.7;
+            const requiredRadius = (requiredArcLength * data.quadrants.length) / (2 * Math.PI);
+            const additionalWidth = Math.max(0, requiredRadius - currentMidRadius) * 2;
+            return baseRingWidth + additionalWidth;
+        }
+        
+        return baseRingWidth;
+    });
+    
+    // Calculate total required space
+    const totalRequired = requiredWidths.reduce((sum, w) => sum + w, 0);
+    const availableSpace = maxRadius - minRadius;
+    
+    // Scale ring widths to fit available space
+    const ringWidths = [];
+    if (totalRequired > availableSpace) {
+        // Need to scale down - maintain proportions
+        const scaleFactor = availableSpace / totalRequired;
+        requiredWidths.forEach(w => {
+            ringWidths.push(w * scaleFactor);
+        });
+    } else {
+        // Fits - use calculated widths
+        ringWidths.push(...requiredWidths);
     }
     
     // Calculate cumulative radii
@@ -903,7 +914,7 @@ function renderRadar(data, searchTerm = '') {
         g.append('text')
             .attr('class', 'ring-label')
             .attr('y', -radius + 20)
-            .text(capitalize(ring.name));
+            .text(ring.name);
     });
     
     // Draw quadrant divider lines
@@ -936,7 +947,7 @@ function renderRadar(data, searchTerm = '') {
             .attr('x', x)
             .attr('y', y)
             .attr('text-anchor', 'middle')
-            .text(capitalize(quadrant.name));
+            .text(quadrant.name);
     });
     
     // Filter entries based on search term
@@ -981,7 +992,94 @@ function renderRadar(data, searchTerm = '') {
             }
         }
         
-        return { ...entry, x, y, dotSize, dotColor };
+        return {
+            ...entry,
+            x,
+            y,
+            dotSize,
+            dotColor,
+            ringIndex,
+            quadrantIndex,
+            innerRadius,
+            outerRadius
+        };
+    });
+    
+    // Use D3 force simulation to prevent overlapping while staying in rings and quadrants
+    const nodes = entriesWithPositions.map(entry => ({
+        ...entry,
+        // Collision radius accounts for dot + label space
+        radius: entry.dotSize + 12,
+        originalX: entry.x,
+        originalY: entry.y
+    }));
+    
+    // Create force simulation
+    const simulation = d3.forceSimulation(nodes)
+        .force('collision', d3.forceCollide()
+            .radius(d => d.radius + 3)
+            .strength(0.9)
+            .iterations(2))
+        .force('x', d3.forceX(d => d.originalX).strength(0.1))
+        .force('y', d3.forceY(d => d.originalY).strength(0.1))
+        .alphaDecay(0.02)
+        .stop();
+    
+    // Run simulation
+    for (let i = 0; i < 200; i++) {
+        simulation.tick();
+    }
+    
+    // Update positions but constrain to ring AND quadrant boundaries
+    nodes.forEach((node, i) => {
+        const entry = entriesWithPositions[i];
+        
+        // Calculate angle and distance from center
+        let angle = Math.atan2(node.y, node.x);
+        let distFromCenter = Math.sqrt(node.x * node.x + node.y * node.y);
+        
+        // Normalize angle to 0-2π
+        if (angle < 0) angle += 2 * Math.PI;
+        
+        // Calculate quadrant boundaries
+        const quadrantAngle = startAngle + (entry.quadrantIndex * angleStep);
+        const quadrantStart = quadrantAngle;
+        const quadrantEnd = quadrantAngle + angleStep;
+        
+        // Normalize angles for comparison
+        let normalizedAngle = angle;
+        let normalizedStart = quadrantStart % (2 * Math.PI);
+        let normalizedEnd = quadrantEnd % (2 * Math.PI);
+        
+        if (normalizedStart < 0) normalizedStart += 2 * Math.PI;
+        if (normalizedEnd < 0) normalizedEnd += 2 * Math.PI;
+        
+        // Check if angle is within quadrant (handle wraparound)
+        let inQuadrant = false;
+        if (normalizedStart < normalizedEnd) {
+            inQuadrant = normalizedAngle >= normalizedStart && normalizedAngle <= normalizedEnd;
+        } else {
+            // Wraparound case
+            inQuadrant = normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd;
+        }
+        
+        // If outside quadrant, clamp to nearest boundary
+        if (!inQuadrant) {
+            const distToStart = Math.abs(normalizedAngle - normalizedStart);
+            const distToEnd = Math.abs(normalizedAngle - normalizedEnd);
+            angle = distToStart < distToEnd ? normalizedStart + 0.05 : normalizedEnd - 0.05;
+        }
+        
+        // Constrain to ring boundaries
+        if (distFromCenter < entry.innerRadius) {
+            distFromCenter = entry.innerRadius + 5;
+        } else if (distFromCenter > entry.outerRadius) {
+            distFromCenter = entry.outerRadius - 5;
+        }
+        
+        // Apply constrained position
+        entry.x = Math.cos(angle) * distFromCenter;
+        entry.y = Math.sin(angle) * distFromCenter;
     });
     
     // Sort entries by size (largest first) so smaller items render on top
