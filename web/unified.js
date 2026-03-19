@@ -827,7 +827,7 @@ function renderRadar(data, searchTerm = '') {
     // Calculate ring radii with smart proportional spacing based on density
     const maxRadius = Math.min(width, height) / 2 - 100;
     const minRadius = 60; // Start radius
-    const baseRingWidth = 100; // Base width for rings
+    const baseRingWidth = 120; // Increased base width for better spacing
     const labelSpacing = 25; // Space needed for labels
     
     // Count items per ring and per quadrant in each ring
@@ -857,17 +857,17 @@ function renderRadar(data, searchTerm = '') {
         // Calculate arc length available in one quadrant
         const quadrantArcLength = (2 * Math.PI * currentMidRadius) / data.quadrants.length;
         
-        // Space needed per item (dot + label + spacing)
+        // Space needed per item (dot + label + spacing) - more generous
         const avgDotSize = 10;
-        const itemSpacing = 28; // Total space per item
+        const itemSpacing = 35; // Increased spacing to prevent overlaps
         const requiredSpace = maxQuadrantCount * itemSpacing;
         
         // If items don't fit, we need a wider ring (larger radius = more arc length)
-        if (requiredSpace > quadrantArcLength * 0.7) {
+        if (requiredSpace > quadrantArcLength * 0.6) { // More aggressive scaling (was 0.7)
             // Calculate how much wider the ring needs to be
-            const requiredArcLength = requiredSpace / 0.7;
+            const requiredArcLength = requiredSpace / 0.6;
             const requiredRadius = (requiredArcLength * data.quadrants.length) / (2 * Math.PI);
-            const additionalWidth = Math.max(0, requiredRadius - currentMidRadius) * 2;
+            const additionalWidth = Math.max(0, requiredRadius - currentMidRadius) * 2.5; // Stronger scaling
             return baseRingWidth + additionalWidth;
         }
         
@@ -1008,29 +1008,30 @@ function renderRadar(data, searchTerm = '') {
     // Use D3 force simulation to prevent overlapping while staying in rings and quadrants
     const nodes = entriesWithPositions.map(entry => ({
         ...entry,
-        // Collision radius accounts for dot + label space
-        radius: entry.dotSize + 12,
+        // Larger collision radius to account for dot + label space below
+        radius: entry.dotSize + 18, // Increased to prevent label overlaps
         originalX: entry.x,
         originalY: entry.y
     }));
     
-    // Create force simulation
+    // Create force simulation with stronger collision
     const simulation = d3.forceSimulation(nodes)
         .force('collision', d3.forceCollide()
-            .radius(d => d.radius + 3)
-            .strength(0.9)
-            .iterations(2))
-        .force('x', d3.forceX(d => d.originalX).strength(0.1))
-        .force('y', d3.forceY(d => d.originalY).strength(0.1))
-        .alphaDecay(0.02)
+            .radius(d => d.radius + 5) // More padding
+            .strength(1.0) // Maximum strength
+            .iterations(3)) // More iterations
+        .force('x', d3.forceX(d => d.originalX).strength(0.08))
+        .force('y', d3.forceY(d => d.originalY).strength(0.08))
+        .alphaDecay(0.015) // Slower decay for better settling
         .stop();
     
-    // Run simulation
-    for (let i = 0; i < 200; i++) {
+    // Run simulation with more iterations
+    for (let i = 0; i < 250; i++) {
         simulation.tick();
     }
     
     // Update positions but constrain to ring AND quadrant boundaries
+    // Also avoid ring label areas (top of each ring)
     nodes.forEach((node, i) => {
         const entry = entriesWithPositions[i];
         
@@ -1067,14 +1068,27 @@ function renderRadar(data, searchTerm = '') {
         if (!inQuadrant) {
             const distToStart = Math.abs(normalizedAngle - normalizedStart);
             const distToEnd = Math.abs(normalizedAngle - normalizedEnd);
-            angle = distToStart < distToEnd ? normalizedStart + 0.05 : normalizedEnd - 0.05;
+            angle = distToStart < distToEnd ? normalizedStart + 0.08 : normalizedEnd - 0.08;
         }
         
-        // Constrain to ring boundaries
-        if (distFromCenter < entry.innerRadius) {
-            distFromCenter = entry.innerRadius + 5;
-        } else if (distFromCenter > entry.outerRadius) {
-            distFromCenter = entry.outerRadius - 5;
+        // Avoid ring label area (top center, angle near 3π/2 or 270°)
+        const topAngle = 3 * Math.PI / 2; // 270 degrees (top)
+        const labelAvoidanceZone = 0.3; // ~17 degrees on each side
+        if (Math.abs(angle - topAngle) < labelAvoidanceZone) {
+            // Push away from top
+            if (angle < topAngle) {
+                angle = topAngle - labelAvoidanceZone - 0.1;
+            } else {
+                angle = topAngle + labelAvoidanceZone + 0.1;
+            }
+        }
+        
+        // Constrain to ring boundaries with more padding
+        const ringPadding = 8; // More padding from ring edges
+        if (distFromCenter < entry.innerRadius + ringPadding) {
+            distFromCenter = entry.innerRadius + ringPadding;
+        } else if (distFromCenter > entry.outerRadius - ringPadding) {
+            distFromCenter = entry.outerRadius - ringPadding;
         }
         
         // Apply constrained position
