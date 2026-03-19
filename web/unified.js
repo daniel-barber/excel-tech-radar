@@ -322,13 +322,12 @@ function updateDatalist(elementId, configItems, entries, fieldName) {
         });
     }
     
-    // For rings (edit-ring), keep config order; for others, sort additional values
-    if (elementId === 'edit-ring') {
-        // Rings: config order first, then sorted additional values
-        const sortedAdditional = Array.from(additionalValues).sort();
-        orderedValues = [...orderedValues, ...sortedAdditional];
+    // For rings and quadrants, keep config order only; for others, include additional values
+    if (elementId === 'edit-ring' || elementId === 'edit-quadrant') {
+        // Rings and Quadrants: config order only, no additional values from Excel
+        // orderedValues already contains config items in order
     } else {
-        // Quadrants/status: sort all values alphabetically
+        // Status/other fields: sort all values alphabetically
         orderedValues = [...orderedValues, ...Array.from(additionalValues)].sort();
     }
     
@@ -492,6 +491,16 @@ async function createProject() {
 
 // ===== Mode Switching =====
 function switchToViewMode() {
+    // Check for unsaved changes
+    if (isDirty) {
+        const confirmSwitch = confirm('You have unsaved changes in the Excel data. Do you want to discard them and switch to view mode?');
+        if (!confirmSwitch) {
+            return; // Stay in edit mode
+        }
+        // User confirmed, reset dirty flag
+        isDirty = false;
+    }
+    
     currentMode = 'view';
     document.getElementById('view-mode-btn').classList.add('active');
     document.getElementById('edit-mode-btn').classList.remove('active');
@@ -533,16 +542,34 @@ async function loadExcelData() {
             throw new Error('Invalid data structure received from API');
         }
         
-        // Initialize AG Grid
-        const columnDefs = data.columns.map(col => ({
-            field: String(col), // Ensure field is a string
-            headerName: String(col),
-            editable: true,
-            sortable: true,
-            filter: true,
-            resizable: true,
-            minWidth: 100
-        }));
+        // Initialize AG Grid with special editors for ring and quadrant
+        const columnDefs = data.columns.map(col => {
+            const colName = String(col);
+            const colDef = {
+                field: colName,
+                headerName: colName,
+                editable: true,
+                sortable: true,
+                filter: true,
+                resizable: true,
+                minWidth: 100
+            };
+            
+            // Add dropdown editors for ring and quadrant columns
+            if (colName.toLowerCase() === 'ring' && radarData && radarData.rings) {
+                colDef.cellEditor = 'agSelectCellEditor';
+                colDef.cellEditorParams = {
+                    values: radarData.rings.map(r => r.name)
+                };
+            } else if (colName.toLowerCase() === 'quadrant' && radarData && radarData.quadrants) {
+                colDef.cellEditor = 'agSelectCellEditor';
+                colDef.cellEditorParams = {
+                    values: radarData.quadrants.map(q => q.name)
+                };
+            }
+            
+            return colDef;
+        });
         
         console.log('Column definitions:', columnDefs);
         
@@ -628,11 +655,22 @@ async function saveExcelData() {
 }
 
 function addRow() {
-    if (!gridApi) return;
+    if (!gridApi || !radarData) return;
     
     const newRow = {};
     gridApi.getColumnDefs().forEach(col => {
-        newRow[col.field] = '';
+        const fieldName = col.field.toLowerCase();
+        
+        // Set default values for required fields
+        if (fieldName === 'name') {
+            newRow[col.field] = 'New Entry';
+        } else if (fieldName === 'ring' && radarData.rings && radarData.rings.length > 0) {
+            newRow[col.field] = radarData.rings[0].name; // First ring (Current HY)
+        } else if (fieldName === 'quadrant' && radarData.quadrants && radarData.quadrants.length > 0) {
+            newRow[col.field] = radarData.quadrants[0].name; // First quadrant (Automation)
+        } else {
+            newRow[col.field] = '';
+        }
     });
     
     gridApi.applyTransaction({ add: [newRow] });
@@ -832,8 +870,10 @@ function renderRadar(data, searchTerm = '') {
     
     // Draw quadrant divider lines
     const angleStep = (2 * Math.PI) / data.quadrants.length;
+    const startAngle = (data.layout.startAngleDeg * Math.PI) / 180;
+    
     data.quadrants.forEach((quadrant, i) => {
-        const angle = i * angleStep;
+        const angle = startAngle + (i * angleStep);
         
         // Draw divider line from center to outer edge
         g.append('line')
@@ -848,7 +888,7 @@ function renderRadar(data, searchTerm = '') {
     
     // Draw quadrant labels
     data.quadrants.forEach((quadrant, i) => {
-        const angle = i * angleStep;
+        const angle = startAngle + (i * angleStep);
         const labelRadius = maxRadius + 40;
         const x = Math.cos(angle + angleStep / 2) * labelRadius;
         const y = Math.sin(angle + angleStep / 2) * labelRadius;
@@ -884,7 +924,7 @@ function renderRadar(data, searchTerm = '') {
         
         // Add jitter within the ring
         const ringRadius = ringCenter + (Math.random() - 0.5) * ringWidth * 0.6;
-        const angle = (quadrantIndex * angleStep) + (Math.random() * angleStep);
+        const angle = startAngle + (quadrantIndex * angleStep) + (Math.random() * angleStep);
         
         const x = Math.cos(angle) * ringRadius;
         const y = Math.sin(angle) * ringRadius;

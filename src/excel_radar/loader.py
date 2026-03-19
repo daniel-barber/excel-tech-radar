@@ -258,6 +258,7 @@ def auto_discover_config(
     
     # Try to find config.yml - check provided path, then project root, then Excel directory
     config_rings = []
+    config_quadrants = []
     config_statuses = []
     config_dealsizes = []
     config_propensitytowin = []
@@ -282,10 +283,10 @@ def auto_discover_config(
         try:
             config = load_config(config_path)
             config_rings = [ring.name for ring in config.rings]
+            config_quadrants = [quad.name for quad in config.quadrants]
             config_statuses = [status.name for status in config.statuses]
             config_dealsizes = config.dealSizes if config.dealSizes else []
             config_propensitytowin = config.propensityToWin if config.propensityToWin else []
-            # Don't load quadrants from config - keep them flexible and Excel-based
         except Exception:
             pass  # If config loading fails, fall back to auto-discovery
     
@@ -327,8 +328,10 @@ def auto_discover_config(
     else:
         unique_rings = ["Ready", "<1 Year", "1-3 Years", "3+ Years"]
     
-    # For quadrants, only use Excel values (don't load from config - keep flexible)
-    if excel_quadrants:
+    # Use config quadrants if available, otherwise use Excel quadrants
+    if config_quadrants:
+        unique_quadrants = config_quadrants
+    elif excel_quadrants:
         unique_quadrants = excel_quadrants
     else:
         unique_quadrants = []  # No quadrants by default - simple circular radar

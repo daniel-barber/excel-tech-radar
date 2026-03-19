@@ -28,23 +28,19 @@ rings:
     description: "Two years out"
 
 # Quadrants (customize these for your use case)
-# Examples: Customer segments, Solution types, Business units, Regions
+# Reordered to match visual layout: Infrastructure (currently at top), Data (want at top), Automation
 quadrants:
   - id: infrastructure
     name: "Infrastructure"
     description: "Infrastructure and platform solutions"
   
-  - id: applications
-    name: "Applications"
-    description: "Application and software solutions"
+  - id: data
+    name: "Data"
+    description: "Data and analytics solutions"
   
-  - id: services
-    name: "Services"
-    description: "Professional and managed services"
-  
-  - id: emerging
-    name: "Emerging Tech"
-    description: "Emerging technologies and innovations"
+  - id: automation
+    name: "Automation"
+    description: "Automation and AI solutions"
 
 # Status values with colors (customize as needed)
 # These map to the 'status' column in Excel
@@ -115,7 +111,7 @@ propensityToWin:
 
 # Layout configuration
 layout:
-  startAngleDeg: 0        # 0° at right; clockwise
+  startAngleDeg: 150      # 150° to position Data (2nd quadrant) at top
   padding: 20             # px between rings
   jitter: 0.85            # 0..1 random jitter factor inside sectors
   minRadius: 80           # minimum radius for innermost ring
