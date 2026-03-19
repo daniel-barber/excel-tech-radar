@@ -93,9 +93,13 @@ class RadarAPI:
         Removes .bak files older than the max_backups limit.
         """
         try:
-            # Find all backup files for this project
+            # Find all backup files for this project in .backups directory
+            backup_dir = self.data_dir / '.backups'
+            if not backup_dir.exists():
+                return
+            
             backup_pattern = f"{project_id}.xlsx.bak*"
-            backup_files = list(self.data_dir.glob(backup_pattern))
+            backup_files = list(backup_dir.glob(backup_pattern))
             
             if len(backup_files) <= self.max_backups:
                 return  # Nothing to clean up
@@ -118,7 +122,11 @@ class RadarAPI:
             from datetime import datetime, timedelta
             cutoff_time = datetime.now().timestamp() - (retention_days * 24 * 60 * 60)
             
-            deleted_files = list(self.data_dir.glob("*.deleted"))
+            trash_dir = self.data_dir / '.trash'
+            if not trash_dir.exists():
+                return
+            
+            deleted_files = list(trash_dir.glob("*.deleted"))
             cleaned_count = 0
             for deleted_file in deleted_files:
                 if deleted_file.stat().st_mtime < cutoff_time:
@@ -277,7 +285,10 @@ class RadarAPI:
             try:
                 projects = []
                 for excel_file in self.data_dir.glob('*.xlsx'):
-                    if excel_file.name.startswith('~$'):  # Skip temp files
+                    # Skip temp files, backup files, and deleted files
+                    if (excel_file.name.startswith('~$') or
+                        excel_file.name.endswith('.bak') or
+                        excel_file.name.endswith('.deleted')):
                         continue
                     
                     stat = excel_file.stat()
@@ -387,6 +398,23 @@ class RadarAPI:
                         # Try 'Sheet1' as fallback
                         df = pd.read_excel(excel_file, sheet_name='Sheet1')
                 
+                # Ensure expected columns exist (add missing ones with empty values)
+                expected_columns = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'link', 'linkName']
+                for col in expected_columns:
+                    if col not in df.columns:
+                        df[col] = None  # Add missing column with None values
+                
+                # Remove old/deprecated columns
+                deprecated_columns = ['status', 'tags', 'customer', 'owner', 'value']
+                for col in deprecated_columns:
+                    if col in df.columns:
+                        df = df.drop(columns=[col])
+                
+                # Reorder columns to match expected order (keep any extra columns at the end)
+                existing_expected = [col for col in expected_columns if col in df.columns]
+                extra_columns = [col for col in df.columns if col not in expected_columns]
+                df = df[existing_expected + extra_columns]
+                
                 # Replace NaN/inf with None for valid JSON
                 df = df.replace([float('nan'), float('inf'), float('-inf')], None)
                 
@@ -431,9 +459,11 @@ class RadarAPI:
                 # Create DataFrame from rows
                 df = pd.DataFrame(rows)
                 
-                # Backup original file with timestamp
+                # Backup original file with timestamp in .backups directory
+                backup_dir = self.data_dir / '.backups'
+                backup_dir.mkdir(exist_ok=True)
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                backup_file = excel_file.with_suffix(f'.xlsx.bak.{timestamp}')
+                backup_file = backup_dir / f"{excel_file.stem}.xlsx.bak.{timestamp}"
                 shutil.copy2(excel_file, backup_file)
                 
                 # Cleanup old backups
@@ -622,9 +652,11 @@ class RadarAPI:
                             print(f"Error setting {key}={value} (type: {type(value)}, dtype: {df[key].dtype}): {e}")
                             raise ValueError(f"Invalid value '{value}' for dtype '{df[key].dtype}'")
                 
-                # Backup original file with timestamp
+                # Backup original file with timestamp in .backups directory
+                backup_dir = self.data_dir / '.backups'
+                backup_dir.mkdir(exist_ok=True)
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                backup_file = excel_file.with_suffix(f'.xlsx.bak.{timestamp}')
+                backup_file = backup_dir / f"{excel_file.stem}.xlsx.bak.{timestamp}"
                 shutil.copy2(excel_file, backup_file)
                 
                 # Cleanup old backups
@@ -674,7 +706,7 @@ class RadarAPI:
                 
                 # Add headers based on template
                 if template == 'default':
-                    headers = ['name', 'ring', 'quadrant', 'status', 'description', 'tags', 'link', 'linkName']
+                    headers = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'link', 'linkName']
                     ws.append(headers)
                     # No sample rows - start with empty project
                 
@@ -699,8 +731,10 @@ class RadarAPI:
                 if not excel_file.exists():
                     return jsonify({'error': 'Project not found'}), 404
                 
-                # Move to trash (rename with .deleted suffix)
-                deleted_file = excel_file.with_suffix('.xlsx.deleted')
+                # Move to trash directory
+                trash_dir = self.data_dir / '.trash'
+                trash_dir.mkdir(exist_ok=True)
+                deleted_file = trash_dir / f"{excel_file.stem}.xlsx.deleted"
                 excel_file.rename(deleted_file)
                 
                 return jsonify({'success': True, 'message': 'Project deleted'})

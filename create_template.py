@@ -24,7 +24,7 @@ def create_template():
     ws_data.title = "Sheet1"
     
     # Headers
-    headers = ["name", "ring", "quadrant", "status", "description", "tags", "link", "linkName"]
+    headers = ["name", "ring", "quadrant", "dealSize", "propensityToWin", "isStrategic", "description", "link", "linkName"]
     ws_data.append(headers)
     
     # Style headers
@@ -40,31 +40,34 @@ def create_template():
     sample_data = [
         [
             'Cloud Migration Strategy',
-            'Ready',
+            'Current HY',
             'Infrastructure',
-            'On Track',
+            '> $500k',
+            'High',
+            'Yes',
             '<p>Comprehensive strategy for migrating legacy applications to cloud infrastructure. Includes assessment, planning, and execution phases.</p>',
-            'cloud, migration, infrastructure',
             'https://example.com/cloud-strategy',
             'View Strategy Doc'
         ],
         [
             'AI-Powered Analytics Platform',
-            'Less Than 1 Year',
-            'Applications',
-            'New',
+            'Next HY',
+            'Data',
+            '$100k - $500k',
+            'Medium',
+            'No',
             '<p>Next-generation analytics platform leveraging <strong>machine learning</strong> and AI to provide predictive insights.</p>',
-            'AI, analytics, machine-learning',
             'https://example.com/ai-analytics',
             'Platform Overview'
         ],
         [
-            'Quantum Computing Research',
-            '3+ Years',
-            'Emerging Tech',
-            'Blocked',
-            '<p>Long-term research initiative exploring quantum computing applications for optimization problems.</p>',
-            'quantum, research, innovation',
+            'Process Automation Initiative',
+            'Year +1',
+            'Automation',
+            '< $100k',
+            'Low',
+            'No',
+            '<p>Initiative to automate manual business processes using RPA and workflow automation tools.</p>',
             '',
             ''
         ]
@@ -74,22 +77,44 @@ def create_template():
         ws_data.append(row_data)
     
     # Add data validation for ring column (column B)
-    ring_values = '"Ready,Less Than 1 Year,1-3 Years,3+ Years"'
+    ring_values = '"Current HY,Next HY,Year +1,Year +2"'
     ring_validation = DataValidation(type="list", formula1=ring_values, allow_blank=False)
     ring_validation.error = 'Please select a valid ring value'
     ring_validation.errorTitle = 'Invalid Ring'
     ws_data.add_data_validation(ring_validation)
     ring_validation.add(f'B2:B{MAX_TEMPLATE_ROWS}')  # Apply to ring column for rows 2-1000
     
-    # Quadrant column (C) is free text - no validation needed
+    # Add data validation for quadrant column (column C)
+    quadrant_values = '"Automation,Data,Infrastructure"'
+    quadrant_validation = DataValidation(type="list", formula1=quadrant_values, allow_blank=False)
+    quadrant_validation.error = 'Please select a valid quadrant value'
+    quadrant_validation.errorTitle = 'Invalid Quadrant'
+    ws_data.add_data_validation(quadrant_validation)
+    quadrant_validation.add(f'C2:C{MAX_TEMPLATE_ROWS}')  # Apply to quadrant column for rows 2-1000
     
-    # Add data validation for status column (column D)
-    status_values = '"On Track,At Risk,Blocked,New,Moved In,Moved Out"'
-    status_validation = DataValidation(type="list", formula1=status_values, allow_blank=True)
-    status_validation.error = 'Please select a valid status value'
-    status_validation.errorTitle = 'Invalid Status'
-    ws_data.add_data_validation(status_validation)
-    status_validation.add(f'D2:D{MAX_TEMPLATE_ROWS}')  # Apply to status column for rows 2-1000
+    # Add data validation for dealSize column (column D)
+    dealsize_values = '"< $100k,$100k - $500k,> $500k"'
+    dealsize_validation = DataValidation(type="list", formula1=dealsize_values, allow_blank=True)
+    dealsize_validation.error = 'Please select a valid deal size'
+    dealsize_validation.errorTitle = 'Invalid Deal Size'
+    ws_data.add_data_validation(dealsize_validation)
+    dealsize_validation.add(f'D2:D{MAX_TEMPLATE_ROWS}')  # Apply to dealSize column for rows 2-1000
+    
+    # Add data validation for propensityToWin column (column E)
+    propensity_values = '"Low,Medium,High"'
+    propensity_validation = DataValidation(type="list", formula1=propensity_values, allow_blank=True)
+    propensity_validation.error = 'Please select a valid propensity to win'
+    propensity_validation.errorTitle = 'Invalid Propensity'
+    ws_data.add_data_validation(propensity_validation)
+    propensity_validation.add(f'E2:E{MAX_TEMPLATE_ROWS}')  # Apply to propensityToWin column for rows 2-1000
+    
+    # Add data validation for isStrategic column (column F)
+    strategic_values = '"Yes,No"'
+    strategic_validation = DataValidation(type="list", formula1=strategic_values, allow_blank=True)
+    strategic_validation.error = 'Please select Yes or No'
+    strategic_validation.errorTitle = 'Invalid Strategic Value'
+    ws_data.add_data_validation(strategic_validation)
+    strategic_validation.add(f'F2:F{MAX_TEMPLATE_ROWS}')  # Apply to isStrategic column for rows 2-1000
     
     # Auto-adjust column widths
     for col_num, header in enumerate(headers, 1):
@@ -128,11 +153,12 @@ def create_template():
     column_descriptions = [
         ["Column", "Required", "Description", "Example"],
         ["name", "Yes", "Unique name for the radar entry", "Cloud Migration Strategy"],
-        ["ring", "Yes", "Time horizon: Ready, Less Than 1 Year, 1-3 Years, 3+ Years", "Ready"],
-        ["quadrant", "Yes", "Category/domain (flexible, can be any text)", "Infrastructure"],
-        ["status", "No", "Current status: On Track, At Risk, Blocked, New, Moved In, Moved Out", "On Track"],
+        ["ring", "Yes", "Time horizon: Current HY, Next HY, Year +1, Year +2", "Current HY"],
+        ["quadrant", "Yes", "Category: Automation, Data, or Infrastructure", "Infrastructure"],
+        ["dealSize", "No", "Deal size category: < $100k, $100k - $500k, > $500k", "> $500k"],
+        ["propensityToWin", "No", "Likelihood to win: Low, Medium, High", "High"],
+        ["isStrategic", "No", "Strategic importance: Yes or No (shows star indicator)", "Yes"],
         ["description", "No", "HTML description (supports <p>, <strong>, <em>, <a>, <ul>, <li>)", "<p>Detailed description...</p>"],
-        ["tags", "No", "Comma-separated tags for filtering", "cloud, migration, infrastructure"],
         ["link", "No", "URL for external reference", "https://example.com/doc"],
         ["linkName", "No", "Display text for the link", "View Documentation"]
     ]
@@ -161,8 +187,8 @@ def create_template():
     
     import_steps = [
         "1. Fill in your radar entries in the 'Sheet1' tab",
-        "2. Use the dropdown menus for Ring and Status columns",
-        "3. Type any value you want for Quadrant (free text)",
+        "2. Use the dropdown menus for Ring, Quadrant, Deal Size, Propensity, and Strategic columns",
+        "3. Name and Ring are required; Quadrant must be one of: Automation, Data, Infrastructure",
         "4. Delete the sample rows (rows 2-4) or replace them with your data",
         "5. Save the file with your desired project name (e.g., 'My Project.xlsx')",
         "6. In Radar Studio, click 'Import' and drag-and-drop your file",
@@ -181,11 +207,12 @@ def create_template():
     
     tips = [
         "• Use HTML in descriptions for rich formatting (bold, italic, links, lists)",
-        "• Tags help with searching and filtering - use consistent tag names",
-        "• Quadrants are required and flexible - create your own categories as needed",
-        "• Leave optional fields empty if not needed",
-        "• Ensure 'name' and 'quadrant' values are not empty",
-        "• Ring values must match: Ready, Less Than 1 Year, 1-3 Years, or 3+ Years"
+        "• Deal Size affects the circle size on the radar (larger deals = bigger circles)",
+        "• Propensity to Win affects the circle color (High=green, Medium=yellow, Low=red)",
+        "• Strategic items show a white star in the center of the circle",
+        "• Quadrants must be: Automation, Data, or Infrastructure",
+        "• Ring values must match: Current HY, Next HY, Year +1, or Year +2",
+        "• Leave optional fields empty if not needed"
     ]
     
     for tip in tips:

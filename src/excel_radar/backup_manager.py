@@ -51,10 +51,14 @@ class BackupManager:
             retention_days: Days to retain deleted files
         """
         self.data_dir = Path(data_dir)
+        self.backup_dir = self.data_dir / '.backups'
+        self.trash_dir = self.data_dir / '.trash'
         self.max_backups = max_backups
         self.retention_days = retention_days
         self.data_dir.mkdir(exist_ok=True)
-        logger.info(f"BackupManager initialized: data_dir={data_dir}, max_backups={max_backups}, retention_days={retention_days}")
+        self.backup_dir.mkdir(exist_ok=True)
+        self.trash_dir.mkdir(exist_ok=True)
+        logger.info(f"BackupManager initialized: data_dir={data_dir}, backup_dir={self.backup_dir}, trash_dir={self.trash_dir}, max_backups={max_backups}, retention_days={retention_days}")
     
     def create_backup(self, project_id: str, backup_type: str = 'manual') -> Optional[Path]:
         """
@@ -73,9 +77,9 @@ class BackupManager:
             logger.warning(f"Cannot create backup: source file not found: {source_file}", extra={'project_id': project_id})
             return None
         
-        # Create timestamped backup
+        # Create timestamped backup in hidden .backups directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = self.data_dir / f"{project_id}.xlsx.bak.{timestamp}"
+        backup_file = self.backup_dir / f"{project_id}.xlsx.bak.{timestamp}"
         
         try:
             shutil.copy2(source_file, backup_file)
@@ -147,7 +151,7 @@ class BackupManager:
             List of BackupInfo objects, sorted by timestamp (newest first)
         """
         pattern = f"{project_id}.xlsx.bak.*" if project_id else "*.xlsx.bak.*"
-        backup_files = list(self.data_dir.glob(pattern))
+        backup_files = list(self.backup_dir.glob(pattern))
         
         backups = []
         for backup_file in backup_files:
@@ -191,7 +195,7 @@ class BackupManager:
         Returns:
             True if deleted successfully, False otherwise
         """
-        backup_file = self.data_dir / f"{project_id}.xlsx.bak.{backup_timestamp}"
+        backup_file = self.backup_dir / f"{project_id}.xlsx.bak.{backup_timestamp}"
         
         try:
             if backup_file.exists():
@@ -238,7 +242,7 @@ class BackupManager:
         try:
             cutoff_time = datetime.now().timestamp() - (self.retention_days * 24 * 60 * 60)
             
-            deleted_files = list(self.data_dir.glob("*.deleted"))
+            deleted_files = list(self.trash_dir.glob("*.deleted"))
             cleaned_count = 0
             
             for deleted_file in deleted_files:
@@ -404,8 +408,8 @@ class BackupManager:
         """
         try:
             project_files = list(self.data_dir.glob("*.xlsx"))
-            backup_files = list(self.data_dir.glob("*.xlsx.bak.*"))
-            deleted_files = list(self.data_dir.glob("*.deleted"))
+            backup_files = list(self.backup_dir.glob("*.xlsx.bak.*"))
+            deleted_files = list(self.trash_dir.glob("*.deleted"))
             
             def get_total_size(files: List[Path]) -> int:
                 return sum(f.stat().st_size for f in files)

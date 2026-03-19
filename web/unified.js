@@ -490,7 +490,7 @@ async function createProject() {
 }
 
 // ===== Mode Switching =====
-function switchToViewMode() {
+async function switchToViewMode() {
     // Check for unsaved changes
     if (isDirty) {
         const confirmSwitch = confirm('You have unsaved changes in the Excel data. Do you want to discard them and switch to view mode?');
@@ -510,6 +510,11 @@ function switchToViewMode() {
     document.querySelector('.app-container').classList.remove('edit-mode');
     document.getElementById('radar-view').style.display = 'flex';
     document.getElementById('edit-view-main').style.display = 'none';
+    
+    // Reload radar data to show any changes made in edit mode
+    if (currentProject) {
+        await loadRadar(currentProject);
+    }
 }
 
 async function switchToEditMode() {
@@ -555,7 +560,7 @@ async function loadExcelData() {
                 minWidth: 100
             };
             
-            // Add dropdown editors for ring and quadrant columns
+            // Add dropdown editors for specific columns
             if (colName.toLowerCase() === 'ring' && radarData && radarData.rings) {
                 colDef.cellEditor = 'agSelectCellEditor';
                 colDef.cellEditorParams = {
@@ -565,6 +570,21 @@ async function loadExcelData() {
                 colDef.cellEditor = 'agSelectCellEditor';
                 colDef.cellEditorParams = {
                     values: radarData.quadrants.map(q => q.name)
+                };
+            } else if (colName.toLowerCase() === 'dealsize' && radarData && radarData.dealSizes) {
+                colDef.cellEditor = 'agSelectCellEditor';
+                colDef.cellEditorParams = {
+                    values: radarData.dealSizes.map(d => d.name)
+                };
+            } else if (colName.toLowerCase() === 'propensitytowin' && radarData && radarData.propensityToWin) {
+                colDef.cellEditor = 'agSelectCellEditor';
+                colDef.cellEditorParams = {
+                    values: radarData.propensityToWin.map(p => p.name)
+                };
+            } else if (colName.toLowerCase() === 'isstrategic') {
+                colDef.cellEditor = 'agSelectCellEditor';
+                colDef.cellEditorParams = {
+                    values: ['Yes', 'No', '']
                 };
             }
             
@@ -644,9 +664,12 @@ async function saveExcelData() {
         
         alert('Saved successfully!');
         
-        // Reload radar if in view mode
+        // Reload radar data (updates radarData variable)
+        radarData = await apiCall(`/projects/${currentProject}`);
+        
+        // If in view mode, also reload the visualization
         if (currentMode === 'view') {
-            await loadRadar(currentProject);
+            renderRadar(radarData);
         }
     } catch (error) {
         console.error('Failed to save:', error);
@@ -657,13 +680,28 @@ async function saveExcelData() {
 function addRow() {
     if (!gridApi || !radarData) return;
     
+    // Find a unique name for the new entry
+    const existingNames = new Set();
+    gridApi.forEachNode(node => {
+        if (node.data && node.data.name) {
+            existingNames.add(node.data.name);
+        }
+    });
+    
+    let newEntryName = 'New Entry';
+    let counter = 2;
+    while (existingNames.has(newEntryName)) {
+        newEntryName = `New Entry ${counter}`;
+        counter++;
+    }
+    
     const newRow = {};
     gridApi.getColumnDefs().forEach(col => {
         const fieldName = col.field.toLowerCase();
         
         // Set default values for required fields
         if (fieldName === 'name') {
-            newRow[col.field] = 'New Entry';
+            newRow[col.field] = newEntryName;
         } else if (fieldName === 'ring' && radarData.rings && radarData.rings.length > 0) {
             newRow[col.field] = radarData.rings[0].name; // First ring (Current HY)
         } else if (fieldName === 'quadrant' && radarData.quadrants && radarData.quadrants.length > 0) {
