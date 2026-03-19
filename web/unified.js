@@ -981,8 +981,8 @@ function renderRadar(data, searchTerm = '') {
         const ringObj = data.rings[ringIndex];
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, fallback to ring color
-        let dotColor = ringObj.color;
+        // Get color from propensityToWin, default to blue if no propensity
+        let dotColor = '#3b82f6'; // Default blue color
         if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
             const propensity = data.propensityToWin.find(p => {
                 return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
@@ -1377,8 +1377,10 @@ function showEditEntryForm() {
     const matchingRing = findMatchingOption(ringSelect, currentDetailEntry.ring);
     ringSelect.value = matchingRing;
     
-    // Set quadrant
-    document.getElementById('edit-quadrant').value = currentDetailEntry.quadrant;
+    // Set quadrant - find matching display name for the slug
+    const quadrantSelect = document.getElementById('edit-quadrant');
+    const matchingQuadrant = findMatchingOption(quadrantSelect, currentDetailEntry.quadrant);
+    quadrantSelect.value = matchingQuadrant;
     
     // Set deal size - check if entry has dealSize field directly, otherwise map from value
     const dealSizeSelect = document.getElementById('edit-dealsize');
