@@ -17,6 +17,37 @@ let currentMode = 'view'; // 'view' or 'edit'
 let currentDetailEntry = null;
 let isDetailDirty = false;          // Track unsaved changes in detail edit mode
 let quillEditor = null;             // Quill rich text editor instance
+// ===== Helper Functions =====
+/**
+ * Create a 5-pointed star path for SVG
+ * @param {number} cx - Center X coordinate
+ * @param {number} cy - Center Y coordinate
+ * @param {number} size - Size of the star (radius to outer points)
+ * @returns {string} SVG path data
+ */
+function createStarPath(cx, cy, size) {
+    const points = 5;
+    const outerRadius = size;
+    const innerRadius = size * 0.4; // Inner points are 40% of outer radius
+    const angle = Math.PI / points;
+    
+    let path = '';
+    for (let i = 0; i < points * 2; i++) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const currentAngle = i * angle - Math.PI / 2; // Start from top
+        const x = cx + radius * Math.cos(currentAngle);
+        const y = cy + radius * Math.sin(currentAngle);
+        
+        if (i === 0) {
+            path += `M ${x} ${y}`;
+        } else {
+            path += ` L ${x} ${y}`;
+        }
+    }
+    path += ' Z'; // Close the path
+    return path;
+}
+
 
 // ===== API Helpers =====
 async function apiCall(endpoint, options = {}) {
@@ -895,15 +926,17 @@ function renderRadar(data, searchTerm = '') {
                 showDetail(entry);
             });
         
-        // Add strategic indicator (dark blue center dot)
+        // Add strategic indicator (white star cutout in center)
         if (entry.isStrategic) {
-            g.append('circle')
+            const starSize = entry.dotSize * 0.5;  // 50% of main dot size
+            const starPath = createStarPath(entry.x, entry.y, starSize);
+            
+            g.append('path')
                 .attr('class', 'radar-dot-strategic')
                 .attr('data-entry-name', entry.name)  // Link to parent entry
-                .attr('cx', entry.x)
-                .attr('cy', entry.y)
-                .attr('r', entry.dotSize * 0.35)  // 35% of main dot size
-                .attr('fill', '#1565C0')  // Dark blue
+                .attr('d', starPath)
+                .attr('fill', '#ffffff')  // White to look like a cutout
+                .attr('stroke', 'none')
                 .style('pointer-events', 'none');  // Don't interfere with click events
         }
         
