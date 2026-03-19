@@ -1,9 +1,13 @@
-name: Deploy to GitHub Pages
+# DISABLED: This workflow is currently disabled because GitHub Pages deployment is not working
+# The standalone app should be used instead of the web deployment
+# To re-enable, uncomment the lines below
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+# name: Deploy to GitHub Pages
+
+# on:
+#   push:
+#     branches: [ main ]
+#   workflow_dispatch:
 
 # Sets permissions for GitHub Pages deployment
 permissions:
