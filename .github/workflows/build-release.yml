@@ -36,7 +36,7 @@ jobs:
       
       - name: Build macOS app (Apple Silicon)
         run: |
-          pyinstaller excel-radar.spec --clean --noconfirm --target-arch arm64
+          pyinstaller excel-radar.spec --clean --noconfirm
       
       - name: Create DMG (Apple Silicon)
         run: |
@@ -98,7 +98,7 @@ jobs:
       
       - name: Build macOS app (Intel)
         run: |
-          arch -x86_64 /usr/local/bin/python3.11 -m PyInstaller excel-radar.spec --clean --noconfirm --target-arch x86_64
+          arch -x86_64 /usr/local/bin/python3.11 -m PyInstaller excel-radar.spec --clean --noconfirm
       
       - name: Create DMG (Intel)
         run: |
