@@ -83,22 +83,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python for Intel
+      - name: Set up Python for Intel using Rosetta
         run: |
-          # Download and install Python for x86_64
-          curl -O https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg
-          sudo installer -pkg python-3.11.9-macos11.pkg -target /
+          # Install Rosetta 2 if not already installed
+          softwareupdate --install-rosetta --agree-to-license || true
           
-          # Use the Intel Python
-          /usr/local/bin/python3.11 -m pip install --upgrade pip
+          # Create a virtual environment using arch to force x86_64
+          arch -x86_64 /usr/bin/python3 -m venv venv-intel
+          
+          # Activate and upgrade pip
+          source venv-intel/bin/activate
+          pip install --upgrade pip
       
-      - name: Install dependencies
+      - name: Install dependencies for Intel
         run: |
-          /usr/local/bin/python3.11 -m pip install -e ".[build]"
+          source venv-intel/bin/activate
+          # Install all dependencies under x86_64 architecture
+          arch -x86_64 pip install -e ".[build]"
       
       - name: Build macOS app (Intel)
         run: |
-          arch -x86_64 /usr/local/bin/python3.11 -m PyInstaller excel-radar.spec --clean --noconfirm
+          source venv-intel/bin/activate
+          arch -x86_64 pyinstaller excel-radar.spec --clean --noconfirm
       
       - name: Create DMG (Intel)
         run: |
