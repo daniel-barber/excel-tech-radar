@@ -83,13 +83,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python for Intel using Rosetta
+      - name: Set up Python 3.11 for Intel
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'  # Force x86_64 architecture
+          cache: 'pip'
+      
+      - name: Set up Intel build environment
         run: |
           # Install Rosetta 2 if not already installed
           softwareupdate --install-rosetta --agree-to-license || true
           
-          # Create a virtual environment using arch to force x86_64
-          arch -x86_64 /usr/bin/python3 -m venv venv-intel
+          # Create a virtual environment for Intel builds
+          python3.11 -m venv venv-intel
           
           # Activate and upgrade pip
           source venv-intel/bin/activate
