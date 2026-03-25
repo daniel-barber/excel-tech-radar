@@ -376,9 +376,43 @@ excel-tech-radar/
 - **Export Often**: Generate PNGs for presentations and documentation
 - **Multiple Projects**: Create separate Excel files for different teams or initiatives
 
+## 🐛 Reporting Issues
+
+Found a bug or have a suggestion? We'd love to hear from you!
+
+### Quick Links
+
+- **[Report a Bug](https://github.com/daniel-barber/excel-tech-radar/issues/new?template=bug_report.md)** - Something isn't working as expected
+- **[Request a Feature](https://github.com/daniel-barber/excel-tech-radar/issues/new?template=feature_request.md)** - Suggest an improvement or new feature
+- **[View All Issues](https://github.com/daniel-barber/excel-tech-radar/issues)** - Browse existing issues and discussions
+
+### Before Reporting
+
+Please take a moment to:
+
+1. **Check existing issues** - Your issue might already be reported or resolved
+2. **Update to the latest version** - The issue may already be fixed
+3. **Review the [Troubleshooting Guide](./TROUBLESHOOTING.md)** - Common issues and solutions
+4. **Check the [Documentation](./README.md)** - Your question might be answered there
+
+### What to Include
+
+When reporting an issue, please provide:
+
+- **Clear description** of the problem or suggestion
+- **Steps to reproduce** (for bugs)
+- **Expected vs actual behavior** (for bugs)
+- **Environment details** (OS, Python version, installation method)
+- **Screenshots or error logs** if applicable
+- **Sample data or configuration** if relevant
+
+### Contributing
+
+Interested in contributing code, documentation, or ideas? Check out our [Contributing Guide](./CONTRIBUTING.md) to get started!
+
 ## Support
 
-For issues or questions, contact the development team or refer to the inline documentation in the code.
+For questions and community discussions, visit [GitHub Discussions](https://github.com/daniel-barber/excel-tech-radar/discussions) or contact the development team.
 
 ---
 
