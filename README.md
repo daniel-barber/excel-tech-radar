@@ -110,7 +110,10 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -e .[prod]
+pip install -r requirements.txt
+
+# Install package in editable mode
+pip install -e .
 
 # Create directories
 mkdir -p data dist logs
@@ -121,6 +124,13 @@ cp .env.example .env
 
 # Start server
 excel-radar serve
+```
+
+**For Development** (includes testing tools):
+```bash
+# Install development dependencies instead
+pip install -r requirements-dev.txt
+pip install -e .
 ```
 
 ### First Steps
