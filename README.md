@@ -147,54 +147,72 @@ Your Excel file should have these columns:
 
 | Column | Required | Description | Example |
 |--------|----------|-------------|---------|
-| name | Yes | Entry name (unique) | "React", "Kubernetes" |
-| ring | Yes | Ring/horizon | "Q1", "Q2", "Adopt", "Trial" |
-| quadrant | No | Category/sector | "Languages & Frameworks" |
+| name | Yes | Entry name (unique) | "Cloud Migration Strategy" |
+| ring | Yes | Time horizon | "Current HY", "Next HY", "Year +1", "Year +2" |
+| quadrant | Yes | Category | "Infrastructure", "Data", "Automation" |
 | dealSize | No | Deal size category | "< $100k", "$100k - $500k", "> $500k" |
 | propensityToWin | No | Win probability | "High", "Medium", "Low" |
-| isStrategic | No | Strategic flag | TRUE, FALSE |
-| description | No | HTML description | "React is a JavaScript library..." |
-| tags | No | Comma-separated tags | "frontend, javascript, ui" |
-| link | No | External URL | "https://react.dev" |
-| linkName | No | Display text for link | "Official Website" |
+| isStrategic | No | Strategic flag | "Yes", "No" |
+| description | No | HTML description | "<p>Detailed description...</p>" |
+| link | No | External URL | "https://example.com/doc" |
+| linkName | No | Display text for link | "View Documentation" |
 
-**Note**: The `status` field has been removed. Use `propensityToWin` and `isStrategic` for better business intelligence.
+**Download Template**: Use `templates/radar_template.xlsx` as a starting point with examples and instructions.
 
 ## ⚙️ Configuration
 
 Edit `config.yml` to customize your radar:
 
-- **Rings**: Define your time horizons, maturity levels, or priority tiers
-- **Statuses**: Configure status options with custom colors
+- **Rings**: Define your time horizons (Current HY, Next HY, Year +1, Year +2)
+- **Quadrants**: Define categories (Infrastructure, Data, Automation)
 - **Deal Sizes**: Define deal size categories that control circle sizes
+- **Propensity to Win**: Configure confidence levels with colors
 - **Layout**: Adjust visual appearance (padding, sizing, angles)
 
 Example:
 ```yaml
 rings:
-  - id: q1
-    name: "Q1"
+  - id: current-hy
+    name: "Current HY"
     order: 0
     color: "#4CAF50"
-  - id: q2
-    name: "Q2"
+  - id: next-hy
+    name: "Next HY"
     order: 1
     color: "#2196F3"
+
+quadrants:
+  - id: infrastructure
+    name: "Infrastructure"
+    description: "Infrastructure and platform solutions"
+  - id: data
+    name: "Data"
+    description: "Data and analytics solutions"
 
 dealSizes:
   - id: small
     name: "< $100k"
     value: 1
-    description: "Small deals under $100k"
   - id: medium
     name: "$100k - $500k"
     value: 2
-    description: "Medium deals $100k to $500k"
   - id: large
     name: "> $500k"
     value: 3
-    description: "Large deals over $500k"
+
+propensityToWin:
+  - id: high
+    name: "High"
+    color: "#4CAF50"
+  - id: medium
+    name: "Medium"
+    color: "#FFC107"
+  - id: low
+    name: "Low"
+    color: "#F44336"
 ```
+
+See `config.yml` for the complete configuration with all options.
 
 ## Environment Configuration
 
@@ -212,20 +230,31 @@ Key environment variables:
 - `RADAR_HOST` - Server host (default: 127.0.0.1)
 - `RADAR_PORT` - Server port (default: 8080)
 - `RADAR_DEBUG` - Debug mode (default: false)
-- `RADAR_DATA_DIR` - Data directory path
+- `RADAR_DATA_DIR` - Data directory path (default: ./data)
 - `RADAR_MAX_BACKUPS` - Number of backups to keep (default: 5)
-- `RADAR_LOG_LEVEL` - Logging level (INFO, DEBUG, WARNING, ERROR)
+- `RADAR_LOG_LEVEL` - Logging level (default: INFO)
+- `RADAR_SECRET_KEY` - Secret key for sessions (generate with: `python -c "import secrets; print(secrets.token_hex(32))"`)
+- `RADAR_ENABLE_SCHEDULER` - Enable automated tasks (default: true)
 
-See `.env.example` for all available options and `config/README.md` for detailed configuration guide.
-
+See `.env.example` for all available options.
 
 ## Advanced Usage
 
-Most users only need `excel-radar serve`. Additional commands for special cases:
+### CLI Commands
 
 ```bash
-# Validate Excel file format (troubleshooting)
+# Start the unified web interface (recommended)
+excel-radar serve --port 8080
+
+# Build static radar from Excel file
+excel-radar build --input data/myproject.xlsx --out dist/
+
+# Validate Excel file format
 excel-radar validate --input data/myproject.xlsx
+
+# Auto-discover configuration from Excel (no config.yml needed)
+excel-radar build --input data/myproject.xlsx --auto-config --title "My Radar"
+```
 
 ## 📚 Documentation
 
@@ -346,10 +375,6 @@ Shows scheduled task information:
 - Run count and error count
 
 
-# Build static files for hosting (advanced)
-excel-radar build --input data/myproject.xlsx --out dist/
-```
-
 ## Project Structure
 
 ```
@@ -426,6 +451,6 @@ For questions and community discussions, visit [GitHub Discussions](https://gith
 
 ---
 
-**Version**: 1.0.0  
-**License**: MIT  
-**Author**: [Daniel Barber]https://github.com/daniel-barber)  
+**Version**: 0.4.4
+**License**: MIT
+**Author**: [Daniel Barber](https://github.com/daniel-barber)
