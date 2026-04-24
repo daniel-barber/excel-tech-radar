@@ -138,6 +138,7 @@ class RadarEntry(BaseModel):
     dealSize: Optional[str] = None
     propensityToWin: Optional[str] = None
     isStrategic: bool = False
+    opportunityWon: bool = False
 
     @field_validator("name")
     @classmethod
@@ -615,6 +616,25 @@ def load_excel(
             if isStrategic:
                 print(f"DEBUG: Entry '{name}' marked as strategic (value: {strategic_val}, type: {type(strategic_val).__name__})")
         
+        # Get opportunityWon flag
+        opportunityWon = False
+        if 'opportunityWon' in df.columns and not pd.isna(row['opportunityWon']):
+            won_val = row['opportunityWon']
+            # Handle boolean values directly
+            if isinstance(won_val, bool):
+                opportunityWon = won_val
+            elif isinstance(won_val, (int, float)):
+                # Handle numeric values (1 = True, 0 = False)
+                opportunityWon = bool(won_val)
+            else:
+                # Handle string representations
+                won_str = str(won_val).strip().lower()
+                opportunityWon = won_str in ['true', 'yes', '1', 'x', 'y']
+            
+            # Debug: print to console if opportunity won
+            if opportunityWon:
+                print(f"DEBUG: Entry '{name}' marked as opportunity won (value: {won_val}, type: {type(won_val).__name__})")
+        
         # Create entry dict
         entry = {
             "id": slugify(name),
@@ -632,6 +652,7 @@ def load_excel(
             "dealSize": dealSize,
             "propensityToWin": propensityToWin,
             "isStrategic": isStrategic,
+            "opportunityWon": opportunityWon,
         }
         
         entries.append(entry)

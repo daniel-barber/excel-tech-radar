@@ -815,13 +815,28 @@ function renderRadar(data, searchTerm = '') {
         
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, fallback to grey
-        let dotColor = '#9e9e9e';  // Default grey color
-        if (entry.propensityToWin && data.propensityToWin) {
+        // Check if opportunity won - if so, override color to blue
+        const isOpportunityWon = entry.opportunityWon === true ||
+                                 entry.opportunityWon === 'true' ||
+                                 entry.opportunityWon === 'TRUE' ||
+                                 entry.opportunityWon === 1 ||
+                                 entry.opportunityWon === '1';
+        
+        let dotColor;
+        if (isOpportunityWon) {
+            // Opportunity won - always blue
+            dotColor = '#2196F3';
+        } else if (entry.propensityToWin && data.propensityToWin) {
+            // Get color from propensityToWin
             const propensity = data.propensityToWin.find(p => p.name === entry.propensityToWin);
             if (propensity && propensity.color) {
                 dotColor = propensity.color;
+            } else {
+                dotColor = '#9e9e9e'; // Default grey
             }
+        } else {
+            // No propensity - default grey
+            dotColor = '#9e9e9e';
         }
         
         g.append('circle')
@@ -984,6 +999,16 @@ async function showDetail(entry) {
         document.getElementById('detail-strategic').style.display = 'inline-block';
     } else {
         document.getElementById('detail-strategic').style.display = 'none';
+    }
+    
+    // Opportunity Won
+    if (entry.opportunityWon === true || entry.opportunityWon === 'true' || entry.opportunityWon === 'TRUE' || entry.opportunityWon === 1 || entry.opportunityWon === '1') {
+        document.getElementById('detail-opportunity-won').textContent = '🏆 Won';
+        document.getElementById('detail-opportunity-won').style.background = '#2196F3'; // Blue
+        document.getElementById('detail-opportunity-won').style.color = '#ffffff';
+        document.getElementById('detail-opportunity-won').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-opportunity-won').style.display = 'none';
     }
     
     // Tags - only show if there are actual tags (not empty array or string "[]")

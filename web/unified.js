@@ -981,15 +981,30 @@ function renderRadar(data, searchTerm = '') {
         const ringObj = data.rings[ringIndex];
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, default to grey if no propensity
-        let dotColor = '#9e9e9e'; // Default grey color
-        if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
+        // Check if opportunity won - if so, override color to blue
+        const isOpportunityWon = entry.opportunityWon === true ||
+                                 entry.opportunityWon === 'true' ||
+                                 entry.opportunityWon === 'TRUE' ||
+                                 entry.opportunityWon === 1 ||
+                                 entry.opportunityWon === '1';
+        
+        let dotColor;
+        if (isOpportunityWon) {
+            // Opportunity won - always blue
+            dotColor = '#2196F3';
+        } else if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
+            // Get color from propensityToWin
             const propensity = data.propensityToWin.find(p => {
                 return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
             });
             if (propensity && propensity.color) {
                 dotColor = propensity.color;
+            } else {
+                dotColor = '#9e9e9e'; // Default grey
             }
+        } else {
+            // No propensity - default grey
+            dotColor = '#9e9e9e';
         }
         
         return {
@@ -1272,6 +1287,16 @@ async function showDetail(entry) {
         document.getElementById('detail-strategic').style.display = 'none';
     }
     
+    // Opportunity Won
+    if (entry.opportunityWon === true || entry.opportunityWon === 'true' || entry.opportunityWon === 'TRUE' || entry.opportunityWon === 1 || entry.opportunityWon === '1') {
+        document.getElementById('detail-opportunity-won').textContent = '🏆 Won';
+        document.getElementById('detail-opportunity-won').style.background = '#2196F3'; // Blue
+        document.getElementById('detail-opportunity-won').style.color = '#ffffff';
+        document.getElementById('detail-opportunity-won').style.display = 'inline-block';
+    } else {
+        document.getElementById('detail-opportunity-won').style.display = 'none';
+    }
+    
     // Tags - only show if there are actual tags (not empty array or string "[]")
     let hasTags = false;
     let tagsArray = [];
@@ -1454,6 +1479,15 @@ function showEditEntryForm() {
                                 currentDetailEntry.isStrategic === 'TRUE' ||
                                 currentDetailEntry.isStrategic === 1 ||
                                 currentDetailEntry.isStrategic === '1';
+    
+    // Set opportunity won checkbox - handle various truthy values from Excel
+    const opportunityWonCheckbox = document.getElementById('edit-opportunity-won');
+    opportunityWonCheckbox.checked = currentDetailEntry.opportunityWon === true ||
+                                     currentDetailEntry.opportunityWon === 'true' ||
+                                     currentDetailEntry.opportunityWon === 'TRUE' ||
+                                     currentDetailEntry.opportunityWon === 1 ||
+                                     currentDetailEntry.opportunityWon === '1';
+    
     document.getElementById('edit-link-name').value = currentDetailEntry.linkName || '';
     document.getElementById('edit-link').value = currentDetailEntry.link || '';
     
@@ -1601,6 +1635,7 @@ async function saveEditEntry(event) {
     const dealSizeValue = document.getElementById('edit-dealsize').value;
     const propensityValue = document.getElementById('edit-propensity').value;
     const isStrategic = document.getElementById('edit-strategic').checked;
+    const opportunityWon = document.getElementById('edit-opportunity-won').checked;
     
     const entryData = {
         name: document.getElementById('edit-name').value,
@@ -1609,6 +1644,7 @@ async function saveEditEntry(event) {
         dealSize: dealSizeValue || null,
         propensityToWin: propensityValue || null,
         isStrategic: isStrategic,
+        opportunityWon: opportunityWon,
         tags: document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t),
         description: descriptionHtml,
         linkName: document.getElementById('edit-link-name').value || null,

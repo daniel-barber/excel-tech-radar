@@ -399,7 +399,7 @@ class RadarAPI:
                         df = pd.read_excel(excel_file, sheet_name='Sheet1')
                 
                 # Ensure expected columns exist (add missing ones with empty values)
-                expected_columns = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'link', 'linkName']
+                expected_columns = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'opportunityWon', 'description', 'link', 'linkName']
                 for col in expected_columns:
                     if col not in df.columns:
                         df[col] = None  # Add missing column with None values
@@ -509,7 +509,7 @@ class RadarAPI:
                 df = pd.read_excel(excel_file, sheet_name=sheet_name)
                 
                 # Ensure all required columns exist
-                required_cols = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'tags', 'link', 'linkName']
+                required_cols = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'opportunityWon', 'description', 'tags', 'link', 'linkName']
                 for col in required_cols:
                     if col not in df.columns:
                         df[col] = pd.Series(dtype='object')
@@ -634,7 +634,7 @@ class RadarAPI:
                         if key == 'tags' and isinstance(value, list):
                             value = ', '.join(value) if value else ''
                         # Convert boolean to proper format
-                        elif key in ['isNew', 'isStrategic'] and isinstance(value, bool):
+                        elif key in ['isNew', 'isStrategic', 'opportunityWon'] and isinstance(value, bool):
                             value = value
                         # Handle None/null/empty values based on column dtype
                         elif value is None or value == '':
@@ -707,7 +707,7 @@ class RadarAPI:
                 
                 # Add headers based on template
                 if template == 'default':
-                    headers = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'description', 'link', 'linkName']
+                    headers = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'opportunityWon', 'description', 'link', 'linkName']
                     ws.append(headers)
                     # No sample rows - start with empty project
                 
