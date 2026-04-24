@@ -815,8 +815,8 @@ function renderRadar(data, searchTerm = '') {
         
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, fallback to blue
-        let dotColor = '#2196F3';  // Default blue color
+        // Get color from propensityToWin, fallback to grey
+        let dotColor = '#9e9e9e';  // Default grey color
         if (entry.propensityToWin && data.propensityToWin) {
             const propensity = data.propensityToWin.find(p => p.name === entry.propensityToWin);
             if (propensity && propensity.color) {

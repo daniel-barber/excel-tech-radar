@@ -981,8 +981,8 @@ function renderRadar(data, searchTerm = '') {
         const ringObj = data.rings[ringIndex];
         const dotSize = calculateDotSize(entry, data.layout, data.entries);
         
-        // Get color from propensityToWin, default to blue if no propensity
-        let dotColor = '#3b82f6'; // Default blue color
+        // Get color from propensityToWin, default to grey if no propensity
+        let dotColor = '#9e9e9e'; // Default grey color
         if (entry.propensityToWin && data.propensityToWin && data.propensityToWin.length > 0) {
             const propensity = data.propensityToWin.find(p => {
                 return p.name === entry.propensityToWin || p.id === entry.propensityToWin;
