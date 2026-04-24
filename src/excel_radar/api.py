@@ -400,9 +400,11 @@ class RadarAPI:
                 
                 # Ensure expected columns exist (add missing ones with empty values)
                 expected_columns = ['name', 'ring', 'quadrant', 'dealSize', 'propensityToWin', 'isStrategic', 'opportunityWon', 'description', 'link', 'linkName']
+                columns_added = False
                 for col in expected_columns:
                     if col not in df.columns:
                         df[col] = None  # Add missing column with None values
+                        columns_added = True
                 
                 # Remove old/deprecated columns
                 deprecated_columns = ['status', 'tags', 'customer', 'owner', 'value']
@@ -414,6 +416,29 @@ class RadarAPI:
                 existing_expected = [col for col in expected_columns if col in df.columns]
                 extra_columns = [col for col in df.columns if col not in expected_columns]
                 df = df[existing_expected + extra_columns]
+                
+                # If columns were added or removed, save the updated structure back to Excel
+                if columns_added or any(col in df.columns for col in deprecated_columns):
+                    try:
+                        # Determine sheet name
+                        try:
+                            xls = pd.ExcelFile(excel_file)
+                            sheet_name = 'Radar' if 'Radar' in xls.sheet_names else xls.sheet_names[0]
+                        except:
+                            sheet_name = 'Sheet1'
+                        
+                        # Create backup before auto-migration
+                        backup_dir = self.data_dir / '.backups'
+                        backup_dir.mkdir(exist_ok=True)
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        backup_file = backup_dir / f"{excel_file.stem}.xlsx.bak.migration.{timestamp}"
+                        shutil.copy2(excel_file, backup_file)
+                        
+                        # Save updated structure
+                        df.to_excel(excel_file, sheet_name=sheet_name, index=False)
+                        print(f"Auto-migrated Excel file: {excel_file.name} (backup created)")
+                    except Exception as e:
+                        print(f"Warning: Could not auto-save migrated Excel structure: {e}")
                 
                 # Replace NaN/inf with None for valid JSON
                 df = df.replace([float('nan'), float('inf'), float('-inf')], None)
