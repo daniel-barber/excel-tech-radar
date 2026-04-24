@@ -968,8 +968,10 @@ async function showDetail(entry) {
         document.getElementById('detail-dealsize').style.display = 'none';
     }
     
-    // Propensity to Win
-    if (entry.propensityToWin) {
+    // Propensity to Win - hide if opportunity is won
+    const isOpportunityWon = entry.opportunityWon === true || entry.opportunityWon === 'true' || entry.opportunityWon === 'TRUE' || entry.opportunityWon === 1 || entry.opportunityWon === '1';
+    
+    if (entry.propensityToWin && !isOpportunityWon) {
         const propensityConfig = radarData.propensityToWin?.find(p => p.name === entry.propensityToWin);
         const propensityColor = propensityConfig?.color || '#2196F3';
         
@@ -1002,7 +1004,7 @@ async function showDetail(entry) {
     }
     
     // Opportunity Won
-    if (entry.opportunityWon === true || entry.opportunityWon === 'true' || entry.opportunityWon === 'TRUE' || entry.opportunityWon === 1 || entry.opportunityWon === '1') {
+    if (isOpportunityWon) {
         document.getElementById('detail-opportunity-won').textContent = '🏆 Won';
         document.getElementById('detail-opportunity-won').style.background = '#2196F3'; // Blue
         document.getElementById('detail-opportunity-won').style.color = '#ffffff';
